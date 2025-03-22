@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace Student_App
+namespace Student_App.Forms
 {
     public partial class Login : LayoutForm
     {
@@ -129,7 +129,7 @@ namespace Student_App
                 await Task.Delay(1000); // Simulate API call
 
                 // Show dashboard on success
-                var dashboard = new Forms.Dashboard();
+                var dashboard = new Dashboard();
                 this.Hide();
                 dashboard.ShowDialog();
                 this.Close();
@@ -152,4 +152,4 @@ namespace Student_App
             errorLabel.Visible = true;
         }
     }
-}
+} 

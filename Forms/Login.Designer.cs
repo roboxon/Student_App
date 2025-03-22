@@ -1,4 +1,4 @@
-﻿namespace Student_App
+namespace Student_App.Forms
 {
     partial class Login
     {
@@ -20,4 +20,4 @@
             base.Dispose(disposing);
         }
     }
-}
+} 
