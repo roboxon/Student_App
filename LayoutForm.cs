@@ -2,22 +2,51 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 
-public partial class LayoutForm : Form
+namespace Student_App
 {
-    public LayoutForm()
+    public partial class LayoutForm : Form
     {
-        InitializeComponent();
-        InitializeLayoutComponents();
-    }
+        private bool disposedValue;
+        protected Panel mainContentPanel = new();
 
-    private void InitializeLayoutComponents()
-    {
-        // Basic form settings
-        this.StartPosition = FormStartPosition.CenterScreen;
-        this.MinimumSize = new Size(800, 600);  // Standard minimum size
-        this.BackColor = Color.FromArgb(240, 240, 240);  // Light gray background
-        
-        // Set default font for the entire form
-        this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+        public LayoutForm()
+        {
+            InitializeComponent();
+            InitializeLayoutComponents();
+        }
+
+        protected virtual void InitializeComponent()
+        {
+            this.Text = "Student App";
+            this.Size = new Size(800, 600);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.BackColor = Color.FromArgb(240, 240, 240);
+        }
+
+        protected virtual void InitializeLayoutComponents()
+        {
+            // Initialize main content panel
+            mainContentPanel.Dock = DockStyle.Fill;
+            mainContentPanel.Padding = new Padding(20);
+            mainContentPanel.BackColor = Color.White;
+
+            this.Controls.Add(mainContentPanel);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    mainContentPanel?.Dispose();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+                disposedValue = true;
+            }
+            base.Dispose(disposing);
+        }
     }
 } 
