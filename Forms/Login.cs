@@ -11,8 +11,9 @@ using Student_App.Services;
 using Student_App.Services.Configuration;
 using System.Text.Json;
 using System.Drawing.Drawing2D;
-using JsonException = System.Text.Json.JsonException;
+using JsonException = Newtonsoft.Json.JsonException;
 using System.Configuration;
+using Student_App.Models;
 
 namespace Student_App.Forms
 {
@@ -467,31 +468,26 @@ namespace Student_App.Forms
             };
         }
 
-        private async void LoginButton_Click(object? sender, EventArgs e)
+        private async void LoginButton_Click(object sender, EventArgs e)
         {
-            if (EmailTextBox == null || PasswordTextBox == null || LoginButton == null || RememberEmailCheckBox == null)
-            {
-                MessageBox.Show("Error: Form controls not initialized", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(EmailTextBox.Text) || string.IsNullOrWhiteSpace(PasswordTextBox.Text))
-            {
-                MessageBox.Show("Please enter both email and password.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
             try
             {
-                LoginButton.Enabled = false;
-                LoginButton.Text = "Logging in...";
-                if (ErrorLabel != null)
+                // Validate input fields
+                if (string.IsNullOrWhiteSpace(EmailTextBox?.Text) || string.IsNullOrWhiteSpace(PasswordTextBox?.Text))
                 {
-                    ErrorLabel.Text = "";
+                    MessageBox.Show("Please enter both email and password.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Disable the login button to prevent multiple clicks
+                if (LoginButton != null)
+                {
+                    LoginButton.Enabled = false;
+                    LoginButton.Text = "Logging in...";
                 }
 
                 // Handle remember email
-                if (RememberEmailCheckBox.Checked)
+                if (RememberEmailCheckBox?.Checked == true)
                 {
                     SaveEmail(EmailTextBox.Text);
                 }
@@ -520,19 +516,26 @@ namespace Student_App.Forms
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var loginResponse = System.Text.Json.JsonSerializer.Deserialize<LoginResponse>(responseContent);
-                    if (loginResponse?.data?.access_token != null && loginResponse.data.refresh_token != null)
+                    try
                     {
-                        TokenService.Instance.StoreTokens(loginResponse.data.access_token, loginResponse.data.refresh_token);
-                        var dashboard = new Dashboard(loginResponse.data.student, loginResponse.data.days);
+                        // Create student instance from JSON response
+                        var student = new Student(responseContent);
+
+                        // Store tokens
+                        TokenService.Instance.StoreTokens(
+                            student.access_token ?? string.Empty,
+                            student.refresh_token ?? string.Empty
+                        );
+
+                        // Create and show dashboard
+                        var dashboard = new Dashboard(student, student.working_days);
                         this.Hide();
                         dashboard.ShowDialog();
                         this.Close();
                     }
-                    else if (ErrorLabel != null)
+                    catch (JsonException ex)
                     {
-                        ErrorLabel.Text = "Invalid response format from server.";
-                        MessageBox.Show("Invalid response format from server.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show($"Error parsing response: {ex.Message}", "Response Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 else
@@ -542,7 +545,7 @@ namespace Student_App.Forms
                     {
                         try
                         {
-                            var errorResponse = System.Text.Json.JsonSerializer.Deserialize<LoginResponse>(responseContent);
+                            var errorResponse = JsonConvert.DeserializeObject<LoginResponse>(responseContent);
                             errorMessage += $"\n{errorResponse?.service_message ?? responseContent}";
                         }
                         catch
@@ -550,42 +553,20 @@ namespace Student_App.Forms
                             errorMessage += $"\n{responseContent}";
                         }
                     }
-                    if (ErrorLabel != null)
-                    {
-                        ErrorLabel.Text = errorMessage;
-                    }
                     MessageBox.Show(errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (HttpRequestException ex)
             {
-                var errorMessage = $"Network error: {ex.Message}";
-                if (ErrorLabel != null)
-                {
-                    ErrorLabel.Text = errorMessage;
-                }
-                MessageBox.Show(errorMessage, "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (JsonException ex)
-            {
-                var errorMessage = $"Invalid response format: {ex.Message}";
-                if (ErrorLabel != null)
-                {
-                    ErrorLabel.Text = errorMessage;
-                }
-                MessageBox.Show(errorMessage, "Response Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Network error: {ex.Message}", "Connection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An unexpected error occurred: {ex.Message}";
-                if (ErrorLabel != null)
-                {
-                    ErrorLabel.Text = errorMessage;
-                }
-                MessageBox.Show(errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"An unexpected error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
+                // Re-enable the login button
                 if (LoginButton != null)
                 {
                     LoginButton.Enabled = true;
@@ -593,62 +574,5 @@ namespace Student_App.Forms
                 }
             }
         }
-    }
-
-    // Response models
-    public class LoginResponse
-    {
-        public int response_code { get; set; }
-        public string? message { get; set; }
-        public int count { get; set; }
-        public string? service_message { get; set; }
-        public LoginData? data { get; set; }
-    }
-
-    public class LoginData
-    {
-        public Student? student { get; set; }
-        public List<WorkingDay>? days { get; set; }
-        public string? access_token { get; set; }
-        public string? refresh_token { get; set; }
-    }
-
-    public class Student
-    {
-        public int id { get; set; }
-        public int company_id { get; set; }
-        public int course_id { get; set; }
-        public float? grade_score { get; set; }
-        public string? group_name { get; set; }
-        public string? email { get; set; }
-        public string? first_name { get; set; }
-        public string? last_name { get; set; }
-        public string? register_at { get; set; }
-        public int register_by { get; set; }
-        public int? mentor_id { get; set; }
-        public string? mentor_name { get; set; }
-        public string? advisor_id { get; set; }
-        public string? advisor_name { get; set; }
-        public string? join_course_date { get; set; }
-        public string? exit_course_date { get; set; }
-        public int course_plan_id { get; set; }
-        public int branch_id { get; set; }
-        public int release_id { get; set; }
-        public int program_id { get; set; }
-        public string? start_date { get; set; }
-        public string? end_date { get; set; }
-        public string? plan_name { get; set; }
-        public string? tag { get; set; }
-        public int is_active { get; set; }
-    }
-
-    public class WorkingDay
-    {
-        public int id { get; set; }
-        public int course_plan_id { get; set; }
-        public int day_number { get; set; }
-        public string? start_time { get; set; }
-        public string? end_time { get; set; }
-        public string? day_name { get; set; }
     }
 } 
