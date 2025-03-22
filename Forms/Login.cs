@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Student_App.Services;
 using Student_App.Services.Configuration;
 using System.Text.Json;
+using System.Drawing.Drawing2D;
 using JsonException = System.Text.Json.JsonException;
 
 namespace Student_App.Forms
@@ -18,12 +19,16 @@ namespace Student_App.Forms
     {
         private readonly HttpClient _httpClient;
         private const string API_URL = "https://training.elexbo.de/studentLogin/loginByemailPassword";
-        private const string DEFAULT_COMPANY_ID = "1"; // Default company ID
+        private const string DEFAULT_COMPANY_ID = "1";
 
+        private Panel? loginPanel;
+        private PictureBox? logoBox;
         private TextBox? EmailTextBox;
         private TextBox? PasswordTextBox;
         private Button? LoginButton;
         private Label? ErrorLabel;
+        private bool isDragging = false;
+        private Point dragStart;
 
         public Login()
         {
@@ -38,55 +43,306 @@ namespace Student_App.Forms
             // Form styling
             this.Text = "Student Login";
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            this.Size = new Size(400, 500);
-            this.BackColor = AppColors.Background;
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.Size = new Size(900, 600);
+            this.BackColor = Color.FromArgb(240, 242, 245);
 
-            // Title label
+            // Add rounded corners to form
+            int radius = 10;
+            GraphicsPath path = new GraphicsPath();
+            path.AddArc(0, 0, radius * 2, radius * 2, 180, 90);
+            path.AddArc(this.Width - radius * 2, 0, radius * 2, radius * 2, 270, 90);
+            path.AddArc(this.Width - radius * 2, this.Height - radius * 2, radius * 2, radius * 2, 0, 90);
+            path.AddArc(0, this.Height - radius * 2, radius * 2, radius * 2, 90, 90);
+            path.CloseFigure();
+            this.Region = new Region(path);
+
+            // Add form shadow
+            this.Paint += (s, e) =>
+            {
+                var rect = new Rectangle(0, 0, this.Width - 1, this.Height - 1);
+                using (var pen = new Pen(Color.FromArgb(50, 0, 0, 0), 1))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+            };
+
+            // Create main container panel with two sections
+            var mainContainer = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(0),
+                BackColor = Color.White
+            };
+
+            // Left section for branding
+            var brandPanel = new Panel
+            {
+                Width = 400,
+                Dock = DockStyle.Left,
+                BackColor = AppColors.Primary
+            };
+
+            // Make brand panel draggable
+            brandPanel.MouseDown += (s, e) =>
+            {
+                isDragging = true;
+                dragStart = e.Location;
+            };
+
+            brandPanel.MouseMove += (s, e) =>
+            {
+                if (isDragging)
+                {
+                    Point p = PointToScreen(e.Location);
+                    Location = new Point(p.X - dragStart.X, p.Y - dragStart.Y);
+                }
+            };
+
+            brandPanel.MouseUp += (s, e) => isDragging = false;
+
+            // Create gradient background for brand panel
+            brandPanel.Paint += (s, e) =>
+            {
+                var rect = new Rectangle(0, 0, brandPanel.Width, brandPanel.Height);
+                using (LinearGradientBrush brush = new LinearGradientBrush(
+                    rect,
+                    AppColors.Primary,
+                    Color.FromArgb(
+                        Math.Max(0, AppColors.Primary.R - 40),
+                        Math.Max(0, AppColors.Primary.G - 40),
+                        Math.Max(0, AppColors.Primary.B - 40)
+                    ),
+                    45F))
+                {
+                    e.Graphics.FillRectangle(brush, rect);
+                }
+            };
+
+            // Add logo and welcome text to brand panel
+            logoBox = new PictureBox
+            {
+                Size = new Size(120, 120),
+                Location = new Point((brandPanel.Width - 120) / 2, 100),
+                BackColor = Color.Transparent
+            };
+
+            // Create a simple logo using graphics
+            var logoBitmap = new Bitmap(120, 120);
+            using (Graphics g = Graphics.FromImage(logoBitmap))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var brush = new LinearGradientBrush(
+                    new Rectangle(0, 0, 120, 120),
+                    Color.White,
+                    Color.FromArgb(230, 230, 230),
+                    45F))
+                {
+                    g.FillEllipse(brush, 10, 10, 100, 100);
+                }
+                using (var pen = new Pen(Color.White, 3))
+                {
+                    g.DrawEllipse(pen, 10, 10, 100, 100);
+                }
+            }
+            logoBox.Image = logoBitmap;
+
+            var welcomeLabel = new Label
+            {
+                Text = "Welcome Back!",
+                ForeColor = Color.White,
+                Font = new Font(AppFonts.Title.FontFamily, 24, FontStyle.Bold),
+                AutoSize = false,
+                Location = new Point(0, 250),
+                Width = brandPanel.Width,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            var subtitleLabel = new Label
+            {
+                Text = "Sign in to continue to your dashboard",
+                ForeColor = Color.FromArgb(220, 220, 220),
+                Font = AppFonts.Body,
+                AutoSize = false,
+                Location = new Point(0, 290),
+                Width = brandPanel.Width,
+                Height = 30,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            brandPanel.Controls.Add(logoBox);
+            brandPanel.Controls.Add(welcomeLabel);
+            brandPanel.Controls.Add(subtitleLabel);
+
+            // Right section for login form
+            loginPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(40),
+                BackColor = Color.White
+            };
+
+            // Make login panel draggable
+            loginPanel.MouseDown += (s, e) =>
+            {
+                isDragging = true;
+                dragStart = e.Location;
+            };
+
+            loginPanel.MouseMove += (s, e) =>
+            {
+                if (isDragging)
+                {
+                    Point p = PointToScreen(e.Location);
+                    Location = new Point(p.X - dragStart.X, p.Y - dragStart.Y);
+                }
+            };
+
+            loginPanel.MouseUp += (s, e) => isDragging = false;
+
+            // Close button
+            var closeButton = new Button
+            {
+                Text = "×",
+                Size = new Size(30, 30),
+                Location = new Point(mainContainer.Width - 430, 10),
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.Gray,
+                Font = new Font(AppFonts.Body.FontFamily, 20),
+                Cursor = Cursors.Hand
+            };
+            closeButton.FlatAppearance.BorderSize = 0;
+            closeButton.MouseEnter += (s, e) => closeButton.ForeColor = Color.FromArgb(220, 53, 69); // Red on hover
+            closeButton.MouseLeave += (s, e) => closeButton.ForeColor = Color.Gray;
+            closeButton.Click += (s, e) => Application.Exit();
+
+            // Title
             var titleLabel = new Label
             {
-                Text = "Student Login",
-                Font = AppFonts.Title,
+                Text = "Sign In",
+                Font = new Font(AppFonts.Title.FontFamily, 28, FontStyle.Bold),
                 ForeColor = AppColors.Text,
-                AutoSize = true,
-                Location = new Point((this.ClientSize.Width - 150) / 2, AppSpacing.Large)
+                Location = new Point(40, 60),
+                AutoSize = true
             };
-            this.Controls.Add(titleLabel);
 
+            // Style email textbox
             if (EmailTextBox != null)
             {
-                EmailTextBox.Font = AppFonts.Body;
-                EmailTextBox.BackColor = Color.White;
-                EmailTextBox.Size = new Size(300, 30);
-                EmailTextBox.Location = new Point((this.ClientSize.Width - 300) / 2, titleLabel.Bottom + AppSpacing.Large);
+                EmailTextBox.BorderStyle = BorderStyle.None;
+                EmailTextBox.Font = new Font(AppFonts.Body.FontFamily, 12);
+                EmailTextBox.Size = new Size(350, 40);
+                EmailTextBox.Location = new Point(10, 8);
+                
+                var emailContainer = CreateTextBoxContainer(EmailTextBox, "Email Address");
+                emailContainer.Location = new Point(40, 140);
+                loginPanel.Controls.Add(emailContainer);
             }
 
+            // Style password textbox
             if (PasswordTextBox != null)
             {
-                PasswordTextBox.Font = AppFonts.Body;
-                PasswordTextBox.BackColor = Color.White;
-                PasswordTextBox.Size = new Size(300, 30);
-                PasswordTextBox.Location = new Point((this.ClientSize.Width - 300) / 2, EmailTextBox?.Bottom ?? 0 + AppSpacing.Medium);
+                PasswordTextBox.BorderStyle = BorderStyle.None;
+                PasswordTextBox.Font = new Font(AppFonts.Body.FontFamily, 12);
+                PasswordTextBox.Size = new Size(350, 40);
+                PasswordTextBox.Location = new Point(10, 8);
+
+                var passwordContainer = CreateTextBoxContainer(PasswordTextBox, "Password");
+                passwordContainer.Location = new Point(40, 220);
+                loginPanel.Controls.Add(passwordContainer);
             }
 
+            // Style login button
             if (LoginButton != null)
             {
-                LoginButton.Font = AppFonts.Body;
+                LoginButton.FlatStyle = FlatStyle.Flat;
                 LoginButton.BackColor = AppColors.Secondary;
                 LoginButton.ForeColor = Color.White;
-                LoginButton.Size = new Size(300, 40);
-                LoginButton.Location = new Point((this.ClientSize.Width - 300) / 2, PasswordTextBox?.Bottom ?? 0 + AppSpacing.Large);
+                LoginButton.Size = new Size(350, 45);
+                LoginButton.Location = new Point(40, 300);
+                LoginButton.Font = new Font(AppFonts.Body.FontFamily, 12, FontStyle.Bold);
+                LoginButton.Cursor = Cursors.Hand;
+                LoginButton.FlatAppearance.BorderSize = 0;
+
+                // Add hover effect
+                LoginButton.MouseEnter += (s, e) => LoginButton.BackColor = Color.FromArgb(
+                    Math.Max(0, AppColors.Secondary.R - 20),
+                    Math.Max(0, AppColors.Secondary.G - 20),
+                    Math.Max(0, AppColors.Secondary.B - 20)
+                );
+                LoginButton.MouseLeave += (s, e) => LoginButton.BackColor = AppColors.Secondary;
             }
 
+            // Style error label
             if (ErrorLabel != null)
             {
                 ErrorLabel.Font = AppFonts.Small;
                 ErrorLabel.ForeColor = AppColors.Error;
                 ErrorLabel.AutoSize = true;
-                ErrorLabel.Location = new Point((this.ClientSize.Width - 300) / 2, LoginButton?.Bottom ?? 0 + AppSpacing.Medium);
-                ErrorLabel.Text = string.Empty;
+                ErrorLabel.Location = new Point(40, 355);
+                ErrorLabel.MaximumSize = new Size(350, 0);
             }
+
+            // Add controls to login panel
+            loginPanel.Controls.Add(closeButton);
+            loginPanel.Controls.Add(titleLabel);
+            if (LoginButton != null) loginPanel.Controls.Add(LoginButton);
+            if (ErrorLabel != null) loginPanel.Controls.Add(ErrorLabel);
+
+            // Add panels to form
+            mainContainer.Controls.Add(loginPanel);
+            mainContainer.Controls.Add(brandPanel);
+            this.Controls.Add(mainContainer);
+        }
+
+        private Panel CreateTextBoxContainer(TextBox textBox, string placeholder)
+        {
+            var container = new Panel
+            {
+                Size = new Size(350, 65),
+                BackColor = Color.White
+            };
+
+            var label = new Label
+            {
+                Text = placeholder,
+                Font = new Font(AppFonts.Small.FontFamily, 10),
+                ForeColor = Color.Gray,
+                Location = new Point(0, 0),
+                AutoSize = true
+            };
+
+            var inputContainer = new Panel
+            {
+                Size = new Size(350, 40),
+                Location = new Point(0, 20),
+                BackColor = Color.FromArgb(245, 247, 250),
+                Padding = new Padding(10, 8, 10, 8)
+            };
+
+            textBox.Location = new Point(10, 8);
+            textBox.Width = 330;
+            textBox.BackColor = Color.FromArgb(245, 247, 250);
+
+            inputContainer.Controls.Add(textBox);
+            container.Controls.Add(label);
+            container.Controls.Add(inputContainer);
+
+            // Add focus effect
+            textBox.Enter += (s, e) =>
+            {
+                inputContainer.BackColor = Color.FromArgb(240, 242, 245);
+                textBox.BackColor = Color.FromArgb(240, 242, 245);
+            };
+
+            textBox.Leave += (s, e) =>
+            {
+                inputContainer.BackColor = Color.FromArgb(245, 247, 250);
+                textBox.BackColor = Color.FromArgb(245, 247, 250);
+            };
+
+            return container;
         }
 
         private void InitializeLoginControls()
@@ -94,46 +350,33 @@ namespace Student_App.Forms
             // Create and configure email textbox
             EmailTextBox = new TextBox
             {
-                Location = new Point(50, 100),
-                Size = new Size(300, 20),
                 Name = "EmailTextBox",
-                PlaceholderText = "Email"
+                PlaceholderText = "Enter your email"
             };
 
             // Create and configure password textbox
             PasswordTextBox = new TextBox
             {
-                Location = new Point(50, 130),
-                Size = new Size(300, 20),
                 Name = "PasswordTextBox",
-                PasswordChar = '*',
-                PlaceholderText = "Password"
+                PasswordChar = '•',
+                PlaceholderText = "Enter your password"
             };
 
             // Create and configure login button
             LoginButton = new Button
             {
-                Location = new Point(50, 160),
-                Size = new Size(300, 30),
                 Name = "LoginButton",
-                Text = "Login"
+                Text = "Sign In"
             };
             LoginButton.Click += LoginButton_Click;
 
             // Create and configure error label
             ErrorLabel = new Label
             {
-                Location = new Point(50, 200),
-                Size = new Size(300, 40),
                 Name = "ErrorLabel",
-                Text = ""
+                Text = "",
+                AutoSize = true
             };
-
-            // Add controls to form
-            this.Controls.Add(EmailTextBox);
-            this.Controls.Add(PasswordTextBox);
-            this.Controls.Add(LoginButton);
-            this.Controls.Add(ErrorLabel);
         }
 
         private async void LoginButton_Click(object? sender, EventArgs e)
