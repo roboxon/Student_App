@@ -3,6 +3,21 @@
 ## Application Overview
 This is a Windows Forms application designed for student activities management, featuring a unified authentication system and modular architecture. The application uses a single token system for all API communications and includes a development mode for debugging API responses.
 
+### Login Form Implementation
+- **Status**: Implemented
+- **Location**: Forms/Login.cs
+- **Features**:
+  - Modern UI with gradient background
+  - Rounded corners and shadows
+  - Draggable panels for easy movement
+  - Remember email functionality
+  - Comprehensive error handling
+  - Development mode API response viewer
+  - Secure token management
+  - Form validation
+  - User-friendly error messages
+  - Smooth transitions and animations
+
 ### Development Mode
 - **Status**: Implemented
 - **Location**: Forms/ApiResponseViewer.cs
@@ -39,39 +54,60 @@ This is a Windows Forms application designed for student activities management, 
     - Maintains single instance
     - Handles window state
     - Proper disposal
+  - Clean shutdown handling
 
 ### Dashboard Implementation
-- **Current Status**: Modern UI Implementation
+- **Status**: Implemented
 - **Location**: Forms/Dashboard.cs
 - **Features**:
   - Modern header with user info
   - Sleek side menu with hover effects
   - Clean content area with rounded corners
   - Status footer with version info
-  - Stats cards with key metrics
-  - Recent activity list
-  - Upcoming schedule panel
+  - Stats cards showing:
+    - Course information
+    - Group details
+    - Grade score
+    - Active status
+  - Student information panel with:
+    - Email
+    - Mentor details
+    - Advisor information
+    - Course dates
+    - Program details
+  - Working schedule panel with:
+    - Day information
+    - Start/End times
+    - Schedule layout
   - Responsive layout
   - Professional color scheme
   - Consistent typography
-- **Layout Components**:
-  1. Header Panel:
-     - Application title
-     - User information
-     - Professional styling
-  2. Side Menu:
-     - Navigation links with hover effects
-     - Active state indicators
-     - Clean, modern design
-  3. Main Content:
-     - Stats cards with metrics
-     - Activity feed with detailed view
-     - Schedule panel
-     - Rounded corners and shadows
-  4. Footer:
-     - Version information
-     - Connection status
-     - Clean, minimal design
+
+### LayoutForm Base Class
+- **Status**: Implemented
+- **Location**: LayoutForm.cs
+- **Features**:
+  - Header panel with:
+    - Application title
+    - User information
+    - Professional styling
+  - Side menu with:
+    - Navigation items
+    - Active state indicators
+    - Hover effects
+  - Content wrapper with:
+    - Rounded corners
+    - Subtle shadows
+    - Proper padding
+  - Footer panel with:
+    - Version information
+    - Status indicators
+  - Event handling for:
+    - Window resizing
+    - Menu item selection
+    - Form state changes
+  - Proper resource disposal
+  - Clean inheritance structure
 
 ### Authentication System Implementation
 - **Status**: Implemented and Enhanced
@@ -330,13 +366,23 @@ This is a Windows Forms application designed for student activities management, 
 ## Design Patterns
 
 ### 1. Service Factory Pattern
-- **Purpose**: Manages service instances and dependencies
-- **Implementation**: `ServiceFactory` class
+- **Implementation**: 
+  1. TokenService singleton pattern for token management
+  2. ServiceFactory for service instance management
 - **Usage**:
   ```csharp
-  var tokenService = ServiceFactory.GetTokenService();
-  var apiService = ServiceFactory.GetApiService();
+  // Get token service instance (singleton)
+  var tokenService = TokenService.Instance;
+  
+  // Get service instances through factory
+  var serviceFactory = new ServiceFactory();
+  var apiService = serviceFactory.GetApiService();
   ```
+- **Benefits**:
+  - Single instance for token management
+  - Centralized service creation
+  - Proper dependency management
+  - Easy access from any form or service
 
 ### 2. Interface-based Design
 - **Purpose**: Enables loose coupling and testability
@@ -377,36 +423,66 @@ This is a Windows Forms application designed for student activities management, 
 - Handle token-related errors
 
 ### 4. API Endpoints Structure
-- **Authentication Endpoints**:
-  - `/auth/login`: Obtain access and refresh tokens
-  - `/auth/refresh`: Refresh access token
-  - `/auth/logout`: Invalidate current tokens
-
-- **Reports Endpoints**:
-  - `/reports/hourly`: Submit hourly reports
-  - `/reports/daily`: Submit daily reports
-  - `/reports/weekly`: Submit weekly reports
-  - `/reports/history`: Get report history
-
-- **Attendance Endpoints**:
-  - `/attendance/mark`: Mark attendance
-  - `/attendance/status`: Get attendance status
-  - `/attendance/history`: Get attendance history
-
-- **Schedule Endpoints**:
-  - `/schedule/current`: Get current schedule
-  - `/schedule/upcoming`: Get upcoming activities
-  - `/schedule/calendar`: Get calendar events
+- **Authentication Endpoint**:
+  - `https://training.elexbo.de/studentLogin/loginByemailPassword`
+  - Method: POST
+  - Parameters:
+    - email: Student email
+    - password: Student password
+    - company_id: Hardcoded to "1"
+  - Response: LoginResponse object containing:
+    - Student information
+    - Working days schedule
+    - Access and refresh tokens
 
 ### 5. API Response Structure
 ```json
 {
-    "success": true,
+    "response_code": 200,
+    "message": "OK",
+    "count": 1,
+    "service_message": "login seccessfull",
     "data": {
-        // Response data specific to endpoint
-    },
-    "error": null,
-    "message": "Operation successful"
+        "student": {
+            "id": 1,
+            "company_id": 1,
+            "course_id": 20,
+            "grade_score": null,
+            "group_name": "string",
+            "email": "string",
+            "first_name": "string",
+            "last_name": "string",
+            "register_at": "string",
+            "register_by": 1,
+            "mentor_id": null,
+            "mentor_name": "string",
+            "advisor_id": "string",
+            "advisor_name": "string",
+            "join_course_date": "string",
+            "exit_course_date": "string",
+            "course_plan_id": 1,
+            "branch_id": 1,
+            "release_id": 1,
+            "program_id": 1,
+            "start_date": "string",
+            "end_date": "string",
+            "plan_name": "string",
+            "tag": "string",
+            "is_active": 1
+        },
+        "days": [
+            {
+                "id": 1,
+                "course_plan_id": 35,
+                "day_number": 1,
+                "start_time": "08:00:00",
+                "end_time": "16:00:00",
+                "day_name": "Monday"
+            }
+        ],
+        "access_token": "JWT_ACCESS_TOKEN",
+        "refresh_token": "JWT_REFRESH_TOKEN"
+    }
 }
 ```
 
@@ -618,30 +694,58 @@ public static class AppSpacing
 ```csharp
 public class Student
 {
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public string Email { get; set; }
-    public string Course { get; set; }
-    public DateTime EnrollmentDate { get; set; }
+    public int id { get; set; }
+    public int company_id { get; set; }
+    public int course_id { get; set; }
+    public float? grade_score { get; set; }
+    public string? group_name { get; set; }
+    public string? email { get; set; }
+    public string? first_name { get; set; }
+    public string? last_name { get; set; }
+    public string? register_at { get; set; }
+    public int register_by { get; set; }
+    public int? mentor_id { get; set; }
+    public string? mentor_name { get; set; }
+    public string? advisor_id { get; set; }
+    public string? advisor_name { get; set; }
+    public string? join_course_date { get; set; }
+    public string? exit_course_date { get; set; }
+    public int course_plan_id { get; set; }
+    public int branch_id { get; set; }
+    public int release_id { get; set; }
+    public int program_id { get; set; }
+    public string? start_date { get; set; }
+    public string? end_date { get; set; }
+    public string? plan_name { get; set; }
+    public string? tag { get; set; }
+    public int is_active { get; set; }
 }
 
-public class Report
+public class WorkingDay
 {
-    public string Id { get; set; }
-    public string StudentId { get; set; }
-    public DateTime Timestamp { get; set; }
-    public string Content { get; set; }
-    public ReportType Type { get; set; }
-    public ReportStatus Status { get; set; }
+    public int id { get; set; }
+    public int course_plan_id { get; set; }
+    public int day_number { get; set; }
+    public string? start_time { get; set; }
+    public string? end_time { get; set; }
+    public string? day_name { get; set; }
 }
 
-public class Attendance
+public class LoginResponse
 {
-    public string Id { get; set; }
-    public string StudentId { get; set; }
-    public DateTime Date { get; set; }
-    public AttendanceStatus Status { get; set; }
-    public string Notes { get; set; }
+    public int response_code { get; set; }
+    public string? message { get; set; }
+    public int count { get; set; }
+    public string? service_message { get; set; }
+    public LoginData? data { get; set; }
+}
+
+public class LoginData
+{
+    public Student? student { get; set; }
+    public List<WorkingDay>? days { get; set; }
+    public string? access_token { get; set; }
+    public string? refresh_token { get; set; }
 }
 ```
 
@@ -673,16 +777,17 @@ public enum AttendanceStatus
 
 ### 3. DTOs (Data Transfer Objects)
 ```csharp
+// Note: These DTOs are planned for future implementation
 public class ReportSubmissionDto
 {
-    public string StudentId { get; set; }
+    public int StudentId { get; set; }
     public string Content { get; set; }
     public ReportType Type { get; set; }
 }
 
 public class AttendanceSubmissionDto
 {
-    public string StudentId { get; set; }
+    public int StudentId { get; set; }
     public DateTime Date { get; set; }
     public AttendanceStatus Status { get; set; }
     public string Notes { get; set; }
@@ -690,31 +795,36 @@ public class AttendanceSubmissionDto
 ```
 
 ### 4. Model Relationships
-- Student has many Reports (1:N)
-- Student has many Attendance records (1:N)
-- Report belongs to one Student (N:1)
-- Attendance belongs to one Student (N:1)
+- LoginResponse contains:
+  - One LoginData object
+  - Response metadata (code, message, count)
+- LoginData contains:
+  - One Student object
+  - List of WorkingDay objects
+  - Access and refresh tokens
+- Student has:
+  - Basic information (id, name, email, etc.)
+  - Course information (course_id, course_plan_id, etc.)
+  - Program details (program_id, branch_id, etc.)
+- WorkingDay has:
+  - Schedule information (day_number, start_time, end_time)
+  - Course plan reference (course_plan_id)
 
 ### 5. Data Validation Rules
 - Student:
-  - Id: Required, unique
-  - Name: Required, 2-100 characters
-  - Email: Required, valid email format
-  - Course: Required, valid course code
+  - id: Required, unique integer
+  - email: Required, valid email format
+  - first_name: Required, 2-50 characters
+  - last_name: Required, 2-50 characters
+  - is_active: Required, 0 or 1
 
-- Report:
-  - Id: Required, unique
-  - StudentId: Required, valid student reference
-  - Content: Required, max 5000 characters
-  - Type: Required, valid enum value
-  - Status: Required, valid enum value
-
-- Attendance:
-  - Id: Required, unique
-  - StudentId: Required, valid student reference
-  - Date: Required, valid date
-  - Status: Required, valid enum value
-  - Notes: Optional, max 500 characters
+- WorkingDay:
+  - id: Required, unique integer
+  - course_plan_id: Required, valid course plan reference
+  - day_number: Required, positive integer
+  - start_time: Required, valid time format (HH:mm:ss)
+  - end_time: Required, valid time format (HH:mm:ss)
+  - day_name: Required, valid day name
 
 ## Build Process Learnings
 
@@ -808,6 +918,33 @@ public class AttendanceSubmissionDto
   }
   ```
 
+- **Concrete Implementation**:
+  ```csharp
+  public class ApiService : BaseApiService
+  {
+      public ApiService(ITokenService tokenService, string? baseUrl = null)
+          : base(tokenService, baseUrl)
+      {
+      }
+  }
+  ```
+
+- **Service Factory**:
+  ```csharp
+  public class ServiceFactory
+  {
+      public ITokenService GetTokenService()
+      {
+          return TokenService.Instance;
+      }
+
+      public IApiService GetApiService()
+      {
+          return new ApiService(GetTokenService());
+      }
+  }
+  ```
+
 ### 5. Nullable Reference Types
 - **Service Methods**:
   - Use nullable return types for API responses
@@ -823,29 +960,20 @@ public class AttendanceSubmissionDto
   - Document nullable behavior
 
 ### 6. Service Factory Pattern
-- **Implementation**:
+- **Implementation**: TokenService singleton pattern
+- **Usage**:
   ```csharp
-  public static class ServiceFactory
-  {
-      private static ITokenService? _tokenService;
-      private static IApiService? _apiService;
-
-      public static IApiService GetApiService()
-      {
-          if (_apiService == null)
-          {
-              _apiService = new ApiService(GetTokenService(), AppConfig.ApiBaseUrl);
-          }
-          return _apiService;
-      }
-  }
+  // Get token service instance
+  var tokenService = TokenService.Instance;
+  
+  // Store tokens
+  tokenService.StoreTokens(accessToken, refreshToken);
   ```
-
-- **Best Practices**:
-  - Lazy initialization of services
-  - Proper parameter order in constructors
-  - Clear dependency management
-  - Service lifetime control
+- **Benefits**:
+  - Single instance throughout application
+  - Thread-safe token management
+  - Centralized token storage
+  - Easy access from any form or service
 
 ## Common Issues and Solutions
 
