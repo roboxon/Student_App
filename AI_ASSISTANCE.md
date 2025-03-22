@@ -230,6 +230,171 @@ This is a Windows Forms application designed for student activities management, 
   }
   ```
 
+### 4. Application State Management
+- **Status**: Planning Phase
+- **Purpose**: Centralized state management for application-wide data
+- **Implementation**: `AppState` class
+- **Features**:
+  - Singleton pattern for global access
+  - Thread-safe state management
+  - Automatic state persistence
+  - State change notifications
+  - Cache management for API responses
+- **Structure**:
+  ```csharp
+  public class AppState
+  {
+      private static AppState? _instance;
+      private static readonly object _lock = new object();
+      private bool _isInitialized = false;
+
+      // Core application state
+      public Student? CurrentStudent { get; private set; }
+      public List<WorkingDay>? WorkingDays { get; private set; }
+      public DateTime? LastApiCall { get; private set; }
+      public int ApiCallCount { get; private set; }
+
+      // Cache settings
+      private const int CACHE_DURATION_MINUTES = 30;
+      private const int MAX_API_CALLS_PER_HOUR = 100;
+
+      // Events for state changes
+      public event EventHandler<Student>? StudentChanged;
+      public event EventHandler<List<WorkingDay>>? WorkingDaysChanged;
+      public event EventHandler<Exception>? StateError;
+
+      private AppState() { }
+
+      public static AppState Instance
+      {
+          get
+          {
+              if (_instance == null)
+              {
+                  lock (_lock)
+                  {
+                      _instance ??= new AppState();
+                  }
+              }
+              return _instance;
+          }
+      }
+
+      public void Initialize(Student student, List<WorkingDay> workingDays)
+      {
+          if (_isInitialized) return;
+
+          CurrentStudent = student;
+          WorkingDays = workingDays;
+          LastApiCall = DateTime.Now;
+          _isInitialized = true;
+
+          StudentChanged?.Invoke(this, student);
+          WorkingDaysChanged?.Invoke(this, workingDays);
+      }
+
+      public bool ShouldRefreshData()
+      {
+          if (!LastApiCall.HasValue) return true;
+          if (ApiCallCount >= MAX_API_CALLS_PER_HOUR) return false;
+
+          return (DateTime.Now - LastApiCall.Value).TotalMinutes >= CACHE_DURATION_MINUTES;
+      }
+
+      public void UpdateStudent(Student student)
+      {
+          CurrentStudent = student;
+          LastApiCall = DateTime.Now;
+          ApiCallCount++;
+          StudentChanged?.Invoke(this, student);
+      }
+
+      public void UpdateWorkingDays(List<WorkingDay> workingDays)
+      {
+          WorkingDays = workingDays;
+          LastApiCall = DateTime.Now;
+          ApiCallCount++;
+          WorkingDaysChanged?.Invoke(this, workingDays);
+      }
+
+      public void Reset()
+      {
+          CurrentStudent = null;
+          WorkingDays = null;
+          LastApiCall = null;
+          ApiCallCount = 0;
+          _isInitialized = false;
+      }
+  }
+  ```
+- **Integration Points**:
+  1. **Login Form**:
+     - Initialize AppState after successful login
+     - Store student and working days data
+     - Handle state errors
+
+  2. **Dashboard**:
+     - Subscribe to state change events
+     - Use cached data when available
+     - Trigger data refresh when needed
+
+  3. **API Services**:
+     - Check AppState before making API calls
+     - Update AppState after successful API calls
+     - Handle cache invalidation
+
+- **Benefits**:
+  1. **Performance Optimization**:
+     - Reduce unnecessary API calls
+     - Cache frequently accessed data
+     - Implement rate limiting
+
+  2. **State Consistency**:
+     - Centralized data management
+     - Consistent state across forms
+     - Automatic state updates
+
+  3. **Error Handling**:
+     - Graceful state recovery
+     - Error notifications
+     - State validation
+
+- **Implementation Steps**:
+  1. Create AppState class with singleton pattern
+  2. Implement state management methods
+  3. Add event system for state changes
+  4. Integrate with existing forms
+  5. Add cache management
+  6. Implement error handling
+  7. Add state persistence
+  8. Test state management
+  9. Document usage patterns
+
+- **Usage Example**:
+  ```csharp
+  // In Login form after successful login
+  AppState.Instance.Initialize(student, workingDays);
+
+  // In Dashboard form
+  AppState.Instance.StudentChanged += (s, student) => {
+      UpdateUI(student);
+  };
+
+  // In API service
+  if (AppState.Instance.ShouldRefreshData())
+  {
+      var data = await FetchDataFromApi();
+      AppState.Instance.UpdateStudent(data.Student);
+      AppState.Instance.UpdateWorkingDays(data.WorkingDays);
+  }
+  else
+  {
+      // Use cached data
+      var student = AppState.Instance.CurrentStudent;
+      var workingDays = AppState.Instance.WorkingDays;
+  }
+  ```
+
 ### Implementation Status
 
 #### Completed Components
