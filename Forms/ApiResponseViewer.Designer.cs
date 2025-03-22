@@ -1,6 +1,6 @@
 namespace Student_App.Forms
 {
-    partial class Login
+    partial class ApiResponseViewer
     {
         /// <summary>
         /// Required designer variable.
@@ -28,16 +28,8 @@ namespace Student_App.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            this.SuspendLayout();
-            // 
-            // Login
-            // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.components = new System.ComponentModel.Container();
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(400, 300);
-            this.Name = "Login";
-            this.Text = "Login";
-            this.ResumeLayout(false);
         }
 
         #endregion

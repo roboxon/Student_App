@@ -1,25 +1,53 @@
 # Student App - AI Development Assistance Document
 
 ## Application Overview
-This is a Windows Forms application designed for student activities management, featuring a unified authentication system and modular architecture. The application uses a single token system for all API communications and maintains a consistent UI through LayoutForms.
+This is a Windows Forms application designed for student activities management, featuring a unified authentication system and modular architecture. The application uses a single token system for all API communications and includes a development mode for debugging API responses.
+
+### Development Mode
+- **Status**: Implemented
+- **Location**: Forms/ApiResponseViewer.cs
+- **Features**:
+  - JSON response formatting
+  - Readable display of API responses
+  - Monospace font for better readability
+  - Close button for easy dismissal
+  - Automatic JSON indentation
+- **Configuration**:
+  - Controlled by `Environment` setting in App.config
+  - Default: Development mode enabled
+  - Production mode disables response viewer
+- **Usage**:
+  - Automatically shows API responses in development mode
+  - Helps with debugging and API integration
+  - Disabled in production for security
 
 ### System Tray Integration
 - **Status**: Implemented
 - **Location**: Forms/SystemTrayApplication.cs
 - **Features**:
-  - Tray icon with context menu
-  - Form state management
-  - Quick access to main features
-  - Status indicators
-- **Usage**:
-  ```csharp
-  // Initialize in Program.cs
-  Application.Run(new SystemTrayApplication());
-  ```
+  - Tray icon with application icon
+  - Context menu with the following items:
+    - Open Dashboard
+    - Reports (placeholder)
+    - Attendance (placeholder)
+    - Exit
+  - Form state management:
+    - Minimizes to tray instead of closing
+    - Double-click to restore
+    - Proper cleanup on exit
+  - Dashboard integration:
+    - Maintains single instance
+    - Handles window state
+    - Proper disposal
 
 ### Dashboard Implementation
 - **Current Status**: Basic Implementation
-- **Required Components**:
+- **Location**: Forms/Dashboard.cs
+- **Features**:
+  - Welcome message
+  - Basic layout structure
+  - Form inheritance
+- **Pending Components**:
   1. Header Panel:
      - User profile section
      - Quick actions
@@ -35,6 +63,74 @@ This is a Windows Forms application designed for student activities management, 
      - Status indicators
      - Version info
 
+### Authentication System Implementation
+- **Status**: Implemented and Tested
+- **Location**: Forms/Login.cs
+- **Features**:
+  - Form-data based authentication
+  - Token management through TokenService
+  - Hardcoded company ID (no UI input needed)
+  - Error handling and user feedback
+  - Proper form control management
+  - Development mode response viewing
+- **API Endpoint**: https://training.elexbo.de/studentLogin/loginByemailPassword
+- **Request Format**:
+  ```
+  email=student@example.com
+  password=password123
+  company_id=1  // Hardcoded, no UI input needed
+  ```
+- **Response Structure**:
+  ```json
+  {
+      "response_code": 200,
+      "message": "OK",
+      "count": 1,
+      "service_message": "login seccessfull",
+      "data": {
+          "student": {
+              "id": 1,
+              "company_id": 1,
+              "course_id": 20,
+              "grade_score": null,
+              "group_name": "string",
+              "email": "string",
+              "first_name": "string",
+              "last_name": "string",
+              "register_at": "string",
+              "register_by": 1,
+              "mentor_id": null,
+              "mentor_name": "string",
+              "advisor_id": "string",
+              "advisor_name": "string",
+              "join_course_date": "string",
+              "exit_course_date": "string",
+              "course_plan_id": 1,
+              "branch_id": 1,
+              "release_id": 1,
+              "program_id": 1,
+              "start_date": "string",
+              "end_date": "string",
+              "plan_name": "string",
+              "tag": "string",
+              "is_active": 1
+          },
+          "days": [
+              {
+                  "id": 1,
+                  "course_plan_id": 35,
+                  "day_number": 1,
+                  "start_time": "08:00:00",
+                  "end_time": "16:00:00",
+                  "day_name": "Monday"
+              }
+          ],
+          "access_token": "JWT_ACCESS_TOKEN",
+          "refresh_token": "JWT_REFRESH_TOKEN"
+      }
+  }
+  ```
+
 ## Core Architecture
 
 ### 1. Authentication System
@@ -43,249 +139,114 @@ This is a Windows Forms application designed for student activities management, 
   - Access Token: Short-lived token for immediate API access
   - Refresh Token: Long-lived token for obtaining new access tokens
 - **Implementation**: `TokenService` handles all token-related operations
-  - Automatic token refresh
-  - Token storage and management
-  - Secure token handling
+  - Token storage in memory
+  - Token validation
+  - Token refresh capability
 
 ### 2. API Communication Layer
 - **Base Implementation**: `BaseApiService` provides core API functionality
 - **Features**:
-  - Automatic token inclusion in all requests
-  - Error handling and logging
+  - Automatic token inclusion in requests
+  - Error handling
   - JSON serialization/deserialization
+  - Development mode response viewing
 - **Usage Pattern**:
   ```csharp
-  // Example of extending BaseApiService
-  public class ReportsService : BaseApiService
+  public class CustomApiService : BaseApiService
   {
-      public ReportsService(ITokenService tokenService) : base(tokenService) { }
+      public CustomApiService(ITokenService tokenService) : base(tokenService) { }
       
-      public async Task<Report> GetReportAsync(string reportId)
+      public async Task<T?> GetDataAsync<T>(string endpoint) where T : class
       {
-          return await GetAsync<Report>($"reports/{reportId}");
+          return await GetAsync<T>(endpoint);
       }
   }
   ```
 
-### 3. UI Architecture
-- **LayoutForm System**:
-  - Base form class providing consistent UI elements
-  - Handles common layout components
-  - Standardizes form appearance and behavior
-
-- **Base LayoutForm Implementation**:
+### 3. Configuration Management
+- **Purpose**: Centralized configuration handling
+- **Implementation**: `AppConfig` class
+- **Features**:
+  - Base URLs and authentication settings
+  - Environment-specific settings
+  - Default values with fallbacks
+  - Development mode control
+- **Structure**:
   ```csharp
-  public partial class LayoutForm : Form
+  public static class AppConfig
   {
-      private bool disposedValue;
-      protected Panel mainContentPanel = new();
-
-      public LayoutForm()
+      // Environment settings
+      public static class Environment
       {
-          InitializeComponent();
-          InitializeLayoutComponents();
+          public static string Current => ConfigurationManager.AppSettings["Environment"] ?? "Development";
+          public static bool IsDevelopment => Current.Equals("Development", StringComparison.OrdinalIgnoreCase);
+          public static bool IsProduction => Current.Equals("Production", StringComparison.OrdinalIgnoreCase);
       }
 
-      protected virtual void InitializeComponent()
-      {
-          this.Text = "Student App";
-          this.Size = new Size(800, 600);
-          this.StartPosition = FormStartPosition.CenterScreen;
-          this.BackColor = Color.FromArgb(240, 240, 240);
-      }
-
-      protected virtual void InitializeLayoutComponents()
-      {
-          mainContentPanel.Dock = DockStyle.Fill;
-          mainContentPanel.Padding = new Padding(20);
-          mainContentPanel.BackColor = Color.White;
-          this.Controls.Add(mainContentPanel);
-      }
-
-      protected override void Dispose(bool disposing)
-      {
-          if (!disposedValue)
-          {
-              if (disposing)
-              {
-                  mainContentPanel?.Dispose();
-              }
-              disposedValue = true;
-          }
-          base.Dispose(disposing);
-      }
+      // Base URLs and authentication
+      public static string TokenEndpoint => ConfigurationManager.AppSettings["TokenEndpoint"] ?? "https://training.elexbo.de/studentLogin/loginByemailPassword";
+      public static string ApiBaseUrl => ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "https://training.elexbo.de";
+      public static int TokenRefreshThreshold => int.Parse(ConfigurationManager.AppSettings["TokenRefreshThreshold"] ?? "300");
   }
   ```
 
-- **Key Features**:
-  1. **Base Panel**: `mainContentPanel` provides a consistent container for all forms
-  2. **Virtual Methods**: Allow customization while maintaining consistency
-  3. **Proper Disposal**: Handles resource cleanup correctly
-  4. **Standard Styling**: Common colors, sizes, and positioning
+### Implementation Status
 
-- **Inheritance Pattern**:
-  ```csharp
-  public partial class CustomForm : LayoutForm
-  {
-      // Initialize form-specific controls at declaration
-      private TextBox customTextBox = new();
-      private Button customButton = new();
-      private Label customLabel = new();
+#### Completed Components
+1. **Authentication**
+   - ✓ Login form with email/password
+   - ✓ Token service integration
+   - ✓ Error handling and validation
+   - ✓ API response processing
+   - ✓ Navigation to dashboard
+   - ✓ Form control management
+   - ✓ Development mode response viewing
 
-      public CustomForm()
-      {
-          InitializeComponent();
-          InitializeCustomControls();
-      }
+2. **System Tray**
+   - ✓ Tray icon implementation
+   - ✓ Context menu with placeholders
+   - ✓ Form state management
+   - ✓ Dashboard integration
+   - ✓ Clean exit handling
+   - ✓ Single instance management
 
-      protected override void InitializeComponent()
-      {
-          base.InitializeComponent();  // Keep base styling
-          this.Text = "Custom Form";   // Override specific properties
-          this.Size = new Size(400, 500);
-      }
+3. **Core Services**
+   - ✓ TokenService implementation
+   - ✓ BaseApiService implementation
+   - ✓ Configuration management
+   - ✓ Interface definitions
+   - ✓ Environment handling
+   - ✓ Development mode support
 
-      private void InitializeCustomControls()
-      {
-          // Initialize control properties
-          customLabel.Text = "Custom Form";
-          customLabel.Font = new Font("Segoe UI", 20, FontStyle.Bold);
-          
-          // Add controls to the mainContentPanel
-          mainContentPanel.Controls.AddRange(new Control[] {
-              customLabel,
-              customTextBox,
-              customButton
-          });
-      }
-  }
-  ```
+### In Progress
+1. **Dashboard**
+   - ✓ Basic layout implemented
+   - ✓ Welcome message
+   - Need to add:
+     - Navigation menu
+     - User profile section
+     - Activity feed
+     - Quick stats
+     - Notifications
 
-### Form Development Best Practices
+### Pending
+1. **Additional Features**
+   - Reports functionality
+   - Attendance tracking
+   - User profile management
+   - Comprehensive logging
+   - Enhanced error handling
 
-#### 1. Control Declaration
-- **DO**: Initialize controls at declaration
-  ```csharp
-  private TextBox usernameTextBox = new();
-  private Button submitButton = new();
-  ```
-- **DON'T**: Leave controls uninitialized
-  ```csharp
-  private TextBox usernameTextBox; // Avoid this
-  ```
-
-#### 2. Form Initialization
-- **DO**: Follow the initialization order
-  ```csharp
-  public CustomForm()
-  {
-      InitializeComponent();      // First: Base setup
-      InitializeCustomControls(); // Second: Custom setup
-  }
-  ```
-- **DON'T**: Skip base initialization
-  ```csharp
-  protected override void InitializeComponent()
-  {
-      // Don't forget base.InitializeComponent();
-      this.Text = "Custom Form"; // Wrong: Base not called
-  }
-  ```
-
-#### 3. Control Layout
-- **DO**: Use the mainContentPanel
-  ```csharp
-  mainContentPanel.Controls.AddRange(new Control[] {
-      headerLabel,
-      contentPanel,
-      footerPanel
-  });
-  ```
-- **DON'T**: Add controls directly to the form
-  ```csharp
-  this.Controls.Add(someControl); // Avoid this
-  ```
-
-#### 4. Event Handling
-- **DO**: Use null-safe event handlers
-  ```csharp
-  private async void Button_Click(object? sender, EventArgs e)
-  ```
-- **DON'T**: Ignore nullable warnings
-  ```csharp
-  private void Button_Click(object sender, EventArgs e) // Avoid this
-  ```
-
-#### 5. Resource Management
-- **DO**: Properly dispose of resources
-  ```csharp
-  protected override void Dispose(bool disposing)
-  {
-      if (!disposedValue)
-      {
-          if (disposing)
-          {
-              customResource?.Dispose();
-          }
-          disposedValue = true;
-      }
-      base.Dispose(disposing);
-  }
-  ```
-- **DON'T**: Create disposable resources without proper cleanup
-
-#### 6. Form Styling
-- **DO**: Use consistent colors and fonts
-  ```csharp
-  button.BackColor = Color.FromArgb(0, 122, 204); // Standard blue
-  label.Font = new Font("Segoe UI", 10);          // Standard font
-  ```
-- **DON'T**: Use hardcoded or inconsistent styles
-
-#### 7. Error Handling
-- **DO**: Provide user feedback
-  ```csharp
-  private void ShowError(string message)
-  {
-      errorLabel.Text = message;
-      errorLabel.Visible = true;
-  }
-  ```
-- **DON'T**: Silently fail or show technical errors
-
-#### 8. Form Navigation
-- **DO**: Handle form lifecycle properly
-  ```csharp
-  private void ShowNextForm()
-  {
-      var nextForm = new NextForm();
-      this.Hide();
-      nextForm.ShowDialog();
-      this.Close();
-  }
-  ```
-- **DON'T**: Leave forms in memory
-
-### Form Testing Checklist
-1. **Initialization**
-   - [ ] Base properties inherited correctly
-   - [ ] Custom properties set properly
-   - [ ] All controls initialized
-
-2. **Layout**
-   - [ ] Controls properly positioned
-   - [ ] Responsive to window resizing
-   - [ ] Consistent padding and margins
-
-3. **Functionality**
-   - [ ] All event handlers working
-   - [ ] Error handling in place
-   - [ ] Navigation working correctly
-
-4. **Resource Management**
-   - [ ] No memory leaks
-   - [ ] Resources properly disposed
-   - [ ] Event handlers properly cleaned up
+### Next Steps
+1. Complete Dashboard UI
+2. Implement specific API endpoints as needed
+3. Add logging system
+4. Enhance error handling
+5. Add response validation
+6. Implement user profile management
+7. Add API response validation
+8. Implement comprehensive error handling
+9. Add development mode features for other services
 
 ## Design Patterns
 
@@ -307,14 +268,6 @@ This is a Windows Forms application designed for student activities management, 
   - Easy to mock for testing
   - Simple to swap implementations
   - Clear contract definition
-
-### 3. Configuration Management
-- **Purpose**: Centralized configuration handling
-- **Implementation**: `AppConfig` class
-- **Features**:
-  - Environment-specific settings
-  - Default values
-  - Type-safe configuration access
 
 ## API Integration Guidelines
 
@@ -903,46 +856,52 @@ This document serves as a living guide for development, incorporating lessons le
 ## Implementation Status
 
 ### Completed Components
-1. **Base Architecture**
-   - LayoutForm implementation
-   - Basic service structure
-   - Form inheritance pattern
-   - Basic UI components
+1. **Authentication**
+   - ✓ Login form with email/password
+   - ✓ Token service integration
+   - ✓ Error handling and validation
+   - ✓ API response processing
+   - ✓ Navigation to dashboard
+   - ✓ Form control management
+   - ✓ Development mode response viewing
 
-2. **Authentication**
-   - Login form (moved to Forms directory)
-   - Token service structure
-   - Basic API integration
+2. **System Tray**
+   - ✓ Tray icon implementation
+   - ✓ Context menu with placeholders
+   - ✓ Form state management
+   - ✓ Dashboard integration
+   - ✓ Clean exit handling
+   - ✓ Single instance management
 
-3. **System Tray**
-   - Tray icon implementation
-   - Context menu
-   - Form state management
-   - Quick access features
-
-4. **Services**
-   - BaseApiService implementation
-   - TokenService implementation
-   - ServiceFactory pattern
-   - Configuration management
-   - Interface definitions
+3. **Core Services**
+   - ✓ TokenService implementation
+   - ✓ BaseApiService implementation
+   - ✓ Configuration management
+   - ✓ Interface definitions
+   - ✓ Environment handling
+   - ✓ Development mode support
 
 ### In Progress
 1. **Dashboard**
-   - Basic layout implemented
-   - Need to add navigation
-   - Need to implement content panels
-   - Need to add user profile section
-   - Need to implement notifications
-   - Need to add activity feed
-   - Need to implement quick stats
+   - ✓ Basic layout implemented
+   - ✓ Welcome message
+   - Need to add:
+     - Navigation menu
+     - User profile section
+     - Activity feed
+     - Quick stats
+     - Notifications
 
 2. **API Integration**
-   - Basic structure in place
-   - Need to implement specific endpoints
-   - Need to add error handling
-   - Need to implement logging
-   - Need to add response validation
+   - ✓ Basic structure in place
+   - ✓ Token handling
+   - ✓ Base service implementation
+   - Need to add:
+     - Specific service endpoints
+     - Error logging
+     - Response validation
+     - Retry logic
+     - Timeout handling
 
 ### Pending
 1. **Reports**
@@ -970,6 +929,25 @@ This document serves as a living guide for development, incorporating lessons le
 6. Implement user profile management
 7. Add API response validation
 8. Implement comprehensive error handling
+9. Add development mode features for other services
+
+## Development Mode
+- **Status**: Implemented
+- **Location**: Forms/ApiResponseViewer.cs
+- **Features**:
+  - JSON response formatting
+  - Readable display of API responses
+  - Monospace font for better readability
+  - Close button for easy dismissal
+  - Automatic JSON indentation
+- **Configuration**:
+  - Controlled by `Environment` setting in App.config
+  - Default: Development mode enabled
+  - Production mode disables response viewer
+- **Usage**:
+  - Automatically shows API responses in development mode
+  - Helps with debugging and API integration
+  - Disabled in production for security
 
 ## Conclusion
 This document serves as a living guide for development, incorporating lessons learned from the build process and establishing best practices for future development. Regular updates should be made as new patterns and solutions are discovered.
@@ -977,46 +955,52 @@ This document serves as a living guide for development, incorporating lessons le
 ## Implementation Status
 
 ### Completed Components
-1. **Base Architecture**
-   - LayoutForm implementation
-   - Basic service structure
-   - Form inheritance pattern
-   - Basic UI components
+1. **Authentication**
+   - ✓ Login form with email/password
+   - ✓ Token service integration
+   - ✓ Error handling and validation
+   - ✓ API response processing
+   - ✓ Navigation to dashboard
+   - ✓ Form control management
+   - ✓ Development mode response viewing
 
-2. **Authentication**
-   - Login form (moved to Forms directory)
-   - Token service structure
-   - Basic API integration
+2. **System Tray**
+   - ✓ Tray icon implementation
+   - ✓ Context menu with placeholders
+   - ✓ Form state management
+   - ✓ Dashboard integration
+   - ✓ Clean exit handling
+   - ✓ Single instance management
 
-3. **System Tray**
-   - Tray icon implementation
-   - Context menu
-   - Form state management
-   - Quick access features
-
-4. **Services**
-   - BaseApiService implementation
-   - TokenService implementation
-   - ServiceFactory pattern
-   - Configuration management
-   - Interface definitions
+3. **Core Services**
+   - ✓ TokenService implementation
+   - ✓ BaseApiService implementation
+   - ✓ Configuration management
+   - ✓ Interface definitions
+   - ✓ Environment handling
+   - ✓ Development mode support
 
 ### In Progress
 1. **Dashboard**
-   - Basic layout implemented
-   - Need to add navigation
-   - Need to implement content panels
-   - Need to add user profile section
-   - Need to implement notifications
-   - Need to add activity feed
-   - Need to implement quick stats
+   - ✓ Basic layout implemented
+   - ✓ Welcome message
+   - Need to add:
+     - Navigation menu
+     - User profile section
+     - Activity feed
+     - Quick stats
+     - Notifications
 
 2. **API Integration**
-   - Basic structure in place
-   - Need to implement specific endpoints
-   - Need to add error handling
-   - Need to implement logging
-   - Need to add response validation
+   - ✓ Basic structure in place
+   - ✓ Token handling
+   - ✓ Base service implementation
+   - Need to add:
+     - Specific service endpoints
+     - Error logging
+     - Response validation
+     - Retry logic
+     - Timeout handling
 
 ### Pending
 1. **Reports**
@@ -1043,4 +1027,26 @@ This document serves as a living guide for development, incorporating lessons le
 5. Add logging system
 6. Implement user profile management
 7. Add API response validation
-8. Implement comprehensive error handling 
+8. Implement comprehensive error handling
+9. Add development mode features for other services
+
+## Development Mode
+- **Status**: Implemented
+- **Location**: Forms/ApiResponseViewer.cs
+- **Features**:
+  - JSON response formatting
+  - Readable display of API responses
+  - Monospace font for better readability
+  - Close button for easy dismissal
+  - Automatic JSON indentation
+- **Configuration**:
+  - Controlled by `Environment` setting in App.config
+  - Default: Development mode enabled
+  - Production mode disables response viewer
+- **Usage**:
+  - Automatically shows API responses in development mode
+  - Helps with debugging and API integration
+  - Disabled in production for security
+
+## Conclusion
+This document serves as a living guide for development, incorporating lessons learned from the build process and establishing best practices for future development. Regular updates should be made as new patterns and solutions are discovered. 

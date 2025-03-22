@@ -1,47 +1,16 @@
 using System;
 using System.Configuration;
+using Student_App.Services.Configuration;
 
 namespace Student_App.Services.Configuration
 {
     public static class AppConfig
     {
-        // Base URLs for different environments
-        public static string TokenEndpoint => ConfigurationManager.AppSettings["TokenEndpoint"] ?? "https://api.example.com/auth";
-        public static string ApiBaseUrl => ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "https://api.example.com";
+        // Base URLs and authentication
+        public static string TokenEndpoint => ConfigurationManager.AppSettings["TokenEndpoint"] ?? "https://training.elexbo.de/studentLogin/loginByemailPassword";
+        public static string ApiBaseUrl => ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "https://training.elexbo.de";
         public static int TokenRefreshThreshold => int.Parse(ConfigurationManager.AppSettings["TokenRefreshThreshold"] ?? "300");
         
-        // Service-specific configurations
-        public static class Services
-        {
-            public static class Reports
-            {
-                public static string BaseUrl => ConfigurationManager.AppSettings["ReportsServiceUrl"] ?? $"{ApiBaseUrl}/reports";
-                public static string Endpoint => ConfigurationManager.AppSettings["ReportsEndpoint"] ?? "reports";
-                public static int Timeout => int.Parse(ConfigurationManager.AppSettings["ReportsTimeout"] ?? "30");
-            }
-
-            public static class Attendance
-            {
-                public static string BaseUrl => ConfigurationManager.AppSettings["AttendanceServiceUrl"] ?? $"{ApiBaseUrl}/attendance";
-                public static string Endpoint => ConfigurationManager.AppSettings["AttendanceEndpoint"] ?? "attendance";
-                public static int Timeout => int.Parse(ConfigurationManager.AppSettings["AttendanceTimeout"] ?? "30");
-            }
-
-            public static class Schedule
-            {
-                public static string BaseUrl => ConfigurationManager.AppSettings["ScheduleServiceUrl"] ?? $"{ApiBaseUrl}/schedule";
-                public static string Endpoint => ConfigurationManager.AppSettings["ScheduleEndpoint"] ?? "schedule";
-                public static int Timeout => int.Parse(ConfigurationManager.AppSettings["ScheduleTimeout"] ?? "30");
-            }
-
-            public static class Profile
-            {
-                public static string BaseUrl => ConfigurationManager.AppSettings["ProfileServiceUrl"] ?? $"{ApiBaseUrl}/profile";
-                public static string Endpoint => ConfigurationManager.AppSettings["ProfileEndpoint"] ?? "profile";
-                public static int Timeout => int.Parse(ConfigurationManager.AppSettings["ProfileTimeout"] ?? "30");
-            }
-        }
-
         // Environment-specific settings
         public static class Environment
         {

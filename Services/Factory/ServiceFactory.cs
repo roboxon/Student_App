@@ -1,35 +1,38 @@
 using Student_App.Services.Interfaces;
-using Student_App.Services.Configuration;
+using System;
 
 namespace Student_App.Services.Factory
 {
-    public static class ServiceFactory
+    public class ServiceFactory
     {
-        private static ITokenService? _tokenService;
-        private static IApiService? _apiService;
+        private static ServiceFactory? _instance;
+        private static readonly object _lock = new object();
 
-        public static ITokenService GetTokenService()
+        private ServiceFactory() { }
+
+        public static ServiceFactory Instance
         {
-            if (_tokenService == null)
+            get
             {
-                _tokenService = new TokenService(AppConfig.TokenEndpoint);
+                if (_instance == null)
+                {
+                    lock (_lock)
+                    {
+                        _instance ??= new ServiceFactory();
+                    }
+                }
+                return _instance;
             }
-            return _tokenService;
         }
 
-        public static IApiService GetApiService()
+        public ITokenService GetTokenService()
         {
-            if (_apiService == null)
-            {
-                _apiService = new ApiService(GetTokenService(), AppConfig.ApiBaseUrl);
-            }
-            return _apiService;
+            return TokenService.Instance;
         }
 
-        public static void ResetServices()
+        public IApiService GetApiService()
         {
-            _tokenService = null;
-            _apiService = null;
+            return new ApiService(GetTokenService());
         }
     }
 } 

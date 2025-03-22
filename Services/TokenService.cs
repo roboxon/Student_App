@@ -9,16 +9,34 @@ namespace Student_App.Services
 {
     public class TokenService : ITokenService
     {
+        private static TokenService? _instance;
+        private static readonly object _lock = new object();
+
         private readonly HttpClient _httpClient;
         private readonly string _tokenEndpoint;
         private string? _accessToken;
         private string? _refreshToken;
         private DateTime _tokenExpiry;
 
-        public TokenService(string tokenEndpoint)
+        public static TokenService Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    lock (_lock)
+                    {
+                        _instance ??= new TokenService();
+                    }
+                }
+                return _instance;
+            }
+        }
+
+        private TokenService()
         {
             _httpClient = new HttpClient();
-            _tokenEndpoint = tokenEndpoint;
+            _tokenEndpoint = "https://example.com/token"; // Replace with actual token endpoint
         }
 
         public async Task<bool> LoginAsync(string username, string password)
@@ -123,6 +141,26 @@ namespace Student_App.Services
             _accessToken = null;
             _refreshToken = null;
             _tokenExpiry = DateTime.MinValue;
+        }
+
+        public void StoreTokens(string accessToken, string refreshToken)
+        {
+            _accessToken = accessToken;
+            _refreshToken = refreshToken;
+        }
+
+        public string? GetAccessToken() => _accessToken;
+        public string? GetRefreshToken() => _refreshToken;
+
+        public void ClearTokens()
+        {
+            _accessToken = null;
+            _refreshToken = null;
+        }
+
+        public bool HasValidTokens()
+        {
+            return !string.IsNullOrEmpty(_accessToken) && !string.IsNullOrEmpty(_refreshToken);
         }
     }
 

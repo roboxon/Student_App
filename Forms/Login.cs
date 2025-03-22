@@ -1,155 +1,211 @@
 using System;
-using System.Drawing;
+using System.Net.Http;
+using System.Text;
 using System.Windows.Forms;
+using System.Threading.Tasks;
+using System.Net.Http.Headers;
+using System.Web;
+using Newtonsoft.Json;
+using System.Collections.Generic;
+using Student_App.Services;
+using Student_App.Services.Configuration;
+using System.Text.Json;
 
 namespace Student_App.Forms
 {
-    public partial class Login : LayoutForm
+    public partial class Login : Form
     {
-        private TextBox usernameTextBox = new();
-        private TextBox passwordTextBox = new();
-        private Button loginButton = new();
-        private Label titleLabel = new();
-        private Label errorLabel = new();
+        private readonly HttpClient _httpClient;
+        private const string API_URL = "https://training.elexbo.de/studentLogin/loginByemailPassword";
+        private const string DEFAULT_COMPANY_ID = "1"; // Default company ID
+
+        private TextBox? EmailTextBox;
+        private TextBox? PasswordTextBox;
+        private Button? LoginButton;
+        private Label? ErrorLabel;
 
         public Login()
         {
             InitializeComponent();
+            _httpClient = new HttpClient();
             InitializeLoginControls();
-        }
-
-        protected override void InitializeComponent()
-        {
-            base.InitializeComponent();
-            this.Text = "Student App - Login";
-            this.Size = new Size(400, 500);
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
         }
 
         private void InitializeLoginControls()
         {
-            // Title label
-            titleLabel.Text = "Student App Login";
-            titleLabel.Font = new Font("Segoe UI", 20, FontStyle.Bold);
-            titleLabel.ForeColor = Color.FromArgb(45, 45, 48);
-            titleLabel.AutoSize = true;
-            titleLabel.Location = new Point(20, 40);
-            titleLabel.TextAlign = ContentAlignment.MiddleCenter;
-
-            // Username field
-            var usernameLabel = new Label
+            // Create and configure email textbox
+            EmailTextBox = new TextBox
             {
-                Text = "Username",
-                Font = new Font("Segoe UI", 10),
-                Location = new Point(20, 120),
-                AutoSize = true
+                Location = new Point(50, 100),
+                Size = new Size(200, 20),
+                Name = "EmailTextBox",
+                PlaceholderText = "Email"
             };
 
-            usernameTextBox.Location = new Point(20, 150);
-            usernameTextBox.Size = new Size(340, 30);
-            usernameTextBox.Font = new Font("Segoe UI", 10);
-            usernameTextBox.BorderStyle = BorderStyle.FixedSingle;
-
-            // Password field
-            var passwordLabel = new Label
+            // Create and configure password textbox
+            PasswordTextBox = new TextBox
             {
-                Text = "Password",
-                Font = new Font("Segoe UI", 10),
-                Location = new Point(20, 200),
-                AutoSize = true
+                Location = new Point(50, 130),
+                Size = new Size(200, 20),
+                Name = "PasswordTextBox",
+                PasswordChar = '*',
+                PlaceholderText = "Password"
             };
 
-            passwordTextBox.Location = new Point(20, 230);
-            passwordTextBox.Size = new Size(340, 30);
-            passwordTextBox.Font = new Font("Segoe UI", 10);
-            passwordTextBox.BorderStyle = BorderStyle.FixedSingle;
-            passwordTextBox.UseSystemPasswordChar = true;
+            // Create and configure login button
+            LoginButton = new Button
+            {
+                Location = new Point(50, 160),
+                Size = new Size(200, 30),
+                Name = "LoginButton",
+                Text = "Login"
+            };
+            LoginButton.Click += LoginButton_Click;
 
-            // Login button
-            loginButton.Text = "Login";
-            loginButton.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            loginButton.Location = new Point(20, 300);
-            loginButton.Size = new Size(340, 40);
-            loginButton.BackColor = Color.FromArgb(0, 122, 204);
-            loginButton.ForeColor = Color.White;
-            loginButton.FlatStyle = FlatStyle.Flat;
-            loginButton.Cursor = Cursors.Hand;
+            // Create and configure error label
+            ErrorLabel = new Label
+            {
+                Location = new Point(50, 200),
+                Size = new Size(200, 20),
+                Name = "ErrorLabel",
+                ForeColor = Color.Red,
+                Text = ""
+            };
 
-            // Error label
-            errorLabel.Text = "";
-            errorLabel.Font = new Font("Segoe UI", 9);
-            errorLabel.ForeColor = Color.FromArgb(232, 17, 35);
-            errorLabel.Location = new Point(20, 350);
-            errorLabel.Size = new Size(340, 20);
-            errorLabel.TextAlign = ContentAlignment.MiddleCenter;
-            errorLabel.Visible = false;
-
-            // Add event handlers
-            loginButton.Click += LoginButton_Click;
-
-            // Add controls to main panel
-            mainContentPanel.Controls.AddRange(new Control[] {
-                titleLabel,
-                usernameLabel,
-                usernameTextBox,
-                passwordLabel,
-                passwordTextBox,
-                loginButton,
-                errorLabel
-            });
+            // Add controls to form
+            this.Controls.Add(EmailTextBox);
+            this.Controls.Add(PasswordTextBox);
+            this.Controls.Add(LoginButton);
+            this.Controls.Add(ErrorLabel);
         }
 
         private async void LoginButton_Click(object? sender, EventArgs e)
         {
+            if (EmailTextBox == null || PasswordTextBox == null || LoginButton == null)
+            {
+                MessageBox.Show("Error: Form controls not initialized", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(EmailTextBox.Text) || string.IsNullOrWhiteSpace(PasswordTextBox.Text))
+            {
+                MessageBox.Show("Please enter both email and password.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             try
             {
-                // Clear previous error
-                errorLabel.Visible = false;
-                errorLabel.Text = "";
+                LoginButton.Enabled = false;
+                LoginButton.Text = "Logging in...";
 
-                // Validate inputs
-                if (string.IsNullOrWhiteSpace(usernameTextBox.Text))
+                var content = new FormUrlEncodedContent(new[]
                 {
-                    ShowError("Please enter your username");
-                    return;
+                    new KeyValuePair<string, string>("email", EmailTextBox.Text),
+                    new KeyValuePair<string, string>("password", PasswordTextBox.Text),
+                    new KeyValuePair<string, string>("company_id", DEFAULT_COMPANY_ID)
+                });
+
+                using var client = new HttpClient();
+                var response = await client.PostAsync(API_URL, content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                // Show response in development mode
+                if (AppConfig.Environment.IsDevelopment)
+                {
+                    var viewer = new ApiResponseViewer("API Response", responseContent);
+                    viewer.Show();
                 }
 
-                if (string.IsNullOrWhiteSpace(passwordTextBox.Text))
+                if (response.IsSuccessStatusCode)
                 {
-                    ShowError("Please enter your password");
-                    return;
+                    var loginResponse = System.Text.Json.JsonSerializer.Deserialize<LoginResponse>(responseContent);
+                    if (loginResponse?.data?.access_token != null && loginResponse.data.refresh_token != null)
+                    {
+                        TokenService.Instance.StoreTokens(loginResponse.data.access_token, loginResponse.data.refresh_token);
+                        var dashboard = new Dashboard();
+                        this.Hide();
+                        dashboard.ShowDialog();
+                        this.Close();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Invalid response format from server.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
-
-                // Disable login button
-                loginButton.Enabled = false;
-                loginButton.Text = "Logging in...";
-
-                // TODO: Implement actual login logic here
-                await Task.Delay(1000); // Simulate API call
-
-                // Show dashboard on success
-                var dashboard = new Dashboard();
-                this.Hide();
-                dashboard.ShowDialog();
-                this.Close();
+                else
+                {
+                    MessageBox.Show($"Login failed: {responseContent}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             catch (Exception ex)
             {
-                ShowError($"Login failed: {ex.Message}");
+                MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                // Re-enable login button
-                loginButton.Enabled = true;
-                loginButton.Text = "Login";
+                if (LoginButton != null)
+                {
+                    LoginButton.Enabled = true;
+                    LoginButton.Text = "Login";
+                }
             }
         }
+    }
 
-        private void ShowError(string message)
-        {
-            errorLabel.Text = message;
-            errorLabel.Visible = true;
-        }
+    // Response models
+    public class LoginResponse
+    {
+        public int response_code { get; set; }
+        public string? message { get; set; }
+        public int count { get; set; }
+        public string? service_message { get; set; }
+        public LoginData? data { get; set; }
+    }
+
+    public class LoginData
+    {
+        public Student? student { get; set; }
+        public List<WorkingDay>? days { get; set; }
+        public string? access_token { get; set; }
+        public string? refresh_token { get; set; }
+    }
+
+    public class Student
+    {
+        public int id { get; set; }
+        public int company_id { get; set; }
+        public int course_id { get; set; }
+        public float? grade_score { get; set; }
+        public string? group_name { get; set; }
+        public string? email { get; set; }
+        public string? first_name { get; set; }
+        public string? last_name { get; set; }
+        public string? register_at { get; set; }
+        public int register_by { get; set; }
+        public int? mentor_id { get; set; }
+        public string? mentor_name { get; set; }
+        public string? advisor_id { get; set; }
+        public string? advisor_name { get; set; }
+        public string? join_course_date { get; set; }
+        public string? exit_course_date { get; set; }
+        public int course_plan_id { get; set; }
+        public int branch_id { get; set; }
+        public int release_id { get; set; }
+        public int program_id { get; set; }
+        public string? start_date { get; set; }
+        public string? end_date { get; set; }
+        public string? plan_name { get; set; }
+        public string? tag { get; set; }
+        public int is_active { get; set; }
+    }
+
+    public class WorkingDay
+    {
+        public int id { get; set; }
+        public int course_plan_id { get; set; }
+        public int day_number { get; set; }
+        public string? start_time { get; set; }
+        public string? end_time { get; set; }
+        public string? day_name { get; set; }
     }
 } 
