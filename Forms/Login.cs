@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Student_App.Services;
 using Student_App.Services.Configuration;
 using System.Text.Json;
+using JsonException = System.Text.Json.JsonException;
 
 namespace Student_App.Forms
 {
@@ -29,6 +30,63 @@ namespace Student_App.Forms
             InitializeComponent();
             _httpClient = new HttpClient();
             InitializeLoginControls();
+            ApplyCommonStyling();
+        }
+
+        private void ApplyCommonStyling()
+        {
+            // Form styling
+            this.Text = "Student Login";
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+            this.Size = new Size(400, 500);
+            this.BackColor = AppColors.Background;
+
+            // Title label
+            var titleLabel = new Label
+            {
+                Text = "Student Login",
+                Font = AppFonts.Title,
+                ForeColor = AppColors.Text,
+                AutoSize = true,
+                Location = new Point((this.ClientSize.Width - 150) / 2, AppSpacing.Large)
+            };
+            this.Controls.Add(titleLabel);
+
+            if (EmailTextBox != null)
+            {
+                EmailTextBox.Font = AppFonts.Body;
+                EmailTextBox.BackColor = Color.White;
+                EmailTextBox.Size = new Size(300, 30);
+                EmailTextBox.Location = new Point((this.ClientSize.Width - 300) / 2, titleLabel.Bottom + AppSpacing.Large);
+            }
+
+            if (PasswordTextBox != null)
+            {
+                PasswordTextBox.Font = AppFonts.Body;
+                PasswordTextBox.BackColor = Color.White;
+                PasswordTextBox.Size = new Size(300, 30);
+                PasswordTextBox.Location = new Point((this.ClientSize.Width - 300) / 2, EmailTextBox?.Bottom ?? 0 + AppSpacing.Medium);
+            }
+
+            if (LoginButton != null)
+            {
+                LoginButton.Font = AppFonts.Body;
+                LoginButton.BackColor = AppColors.Secondary;
+                LoginButton.ForeColor = Color.White;
+                LoginButton.Size = new Size(300, 40);
+                LoginButton.Location = new Point((this.ClientSize.Width - 300) / 2, PasswordTextBox?.Bottom ?? 0 + AppSpacing.Large);
+            }
+
+            if (ErrorLabel != null)
+            {
+                ErrorLabel.Font = AppFonts.Small;
+                ErrorLabel.ForeColor = AppColors.Error;
+                ErrorLabel.AutoSize = true;
+                ErrorLabel.Location = new Point((this.ClientSize.Width - 300) / 2, LoginButton?.Bottom ?? 0 + AppSpacing.Medium);
+                ErrorLabel.Text = string.Empty;
+            }
         }
 
         private void InitializeLoginControls()
@@ -37,7 +95,7 @@ namespace Student_App.Forms
             EmailTextBox = new TextBox
             {
                 Location = new Point(50, 100),
-                Size = new Size(200, 20),
+                Size = new Size(300, 20),
                 Name = "EmailTextBox",
                 PlaceholderText = "Email"
             };
@@ -46,7 +104,7 @@ namespace Student_App.Forms
             PasswordTextBox = new TextBox
             {
                 Location = new Point(50, 130),
-                Size = new Size(200, 20),
+                Size = new Size(300, 20),
                 Name = "PasswordTextBox",
                 PasswordChar = '*',
                 PlaceholderText = "Password"
@@ -56,7 +114,7 @@ namespace Student_App.Forms
             LoginButton = new Button
             {
                 Location = new Point(50, 160),
-                Size = new Size(200, 30),
+                Size = new Size(300, 30),
                 Name = "LoginButton",
                 Text = "Login"
             };
@@ -66,9 +124,8 @@ namespace Student_App.Forms
             ErrorLabel = new Label
             {
                 Location = new Point(50, 200),
-                Size = new Size(200, 20),
+                Size = new Size(300, 40),
                 Name = "ErrorLabel",
-                ForeColor = Color.Red,
                 Text = ""
             };
 
@@ -97,6 +154,7 @@ namespace Student_App.Forms
             {
                 LoginButton.Enabled = false;
                 LoginButton.Text = "Logging in...";
+                ErrorLabel.Text = "";
 
                 var content = new FormUrlEncodedContent(new[]
                 {
@@ -129,17 +187,46 @@ namespace Student_App.Forms
                     }
                     else
                     {
+                        ErrorLabel.Text = "Invalid response format from server.";
                         MessageBox.Show("Invalid response format from server.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 else
                 {
-                    MessageBox.Show($"Login failed: {responseContent}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    var errorMessage = $"Login failed: {response.StatusCode}";
+                    if (!string.IsNullOrEmpty(responseContent))
+                    {
+                        try
+                        {
+                            var errorResponse = System.Text.Json.JsonSerializer.Deserialize<LoginResponse>(responseContent);
+                            errorMessage += $"\n{errorResponse?.service_message ?? responseContent}";
+                        }
+                        catch
+                        {
+                            errorMessage += $"\n{responseContent}";
+                        }
+                    }
+                    ErrorLabel.Text = errorMessage;
+                    MessageBox.Show(errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
+            }
+            catch (HttpRequestException ex)
+            {
+                var errorMessage = $"Network error: {ex.Message}";
+                ErrorLabel.Text = errorMessage;
+                MessageBox.Show(errorMessage, "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (JsonException ex)
+            {
+                var errorMessage = $"Invalid response format: {ex.Message}";
+                ErrorLabel.Text = errorMessage;
+                MessageBox.Show(errorMessage, "Response Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                var errorMessage = $"An unexpected error occurred: {ex.Message}";
+                ErrorLabel.Text = errorMessage;
+                MessageBox.Show(errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
