@@ -1,17 +1,22 @@
 using System.Drawing;
 using System.Windows.Forms;
 using Student_App.Services.Configuration;
+using Student_App.Forms;
 
 namespace Student_App.Forms
 {
     public partial class Dashboard : LayoutForm
     {
-        private Panel statsPanel;
-        private Panel activityPanel;
-        private Panel schedulePanel;
+        private Panel statsPanel = new();
+        private Panel activityPanel = new();
+        private Panel schedulePanel = new();
+        private Student? currentStudent;
+        private List<WorkingDay>? workingDays;
 
-        public Dashboard()
+        public Dashboard(Student? student = null, List<WorkingDay>? days = null)
         {
+            currentStudent = student;
+            workingDays = days;
             InitializeComponent();
             InitializeDashboardControls();
             SetActiveMenuItem("Dashboard");
@@ -21,7 +26,10 @@ namespace Student_App.Forms
         {
             base.InitializeComponent();
             this.Text = "Student Dashboard";
-            UpdateUserInfo("John Doe"); // This should be updated with actual user info
+            if (currentStudent != null)
+            {
+                UpdateUserInfo($"{currentStudent.first_name} {currentStudent.last_name}");
+            }
         }
 
         private void InitializeDashboardControls()
@@ -35,10 +43,10 @@ namespace Student_App.Forms
             };
 
             var statsCards = new[] {
-                ("Total Hours", "120"),
-                ("Attendance", "95%"),
-                ("Tasks", "15/20"),
-                ("Grade", "A")
+                ("Course", currentStudent?.plan_name ?? "N/A"),
+                ("Group", currentStudent?.group_name ?? "N/A"),
+                ("Grade", currentStudent?.grade_score?.ToString("F1") ?? "N/A"),
+                ("Status", currentStudent?.is_active == 1 ? "Active" : "Inactive")
             };
 
             int cardWidth = (mainContentPanel.Width - 60) / 4;
@@ -63,13 +71,13 @@ namespace Student_App.Forms
 
             var activityTitle = new Label
             {
-                Text = "Recent Activity",
+                Text = "Student Information",
                 Font = AppFonts.Heading,
                 AutoSize = true,
                 Location = new Point(0, 0)
             };
 
-            var activityList = new ListView
+            var infoList = new ListView
             {
                 View = View.Details,
                 FullRowSelect = true,
@@ -79,21 +87,27 @@ namespace Student_App.Forms
                 Font = AppFonts.Body
             };
 
-            activityList.Columns.Add("Date", 150);
-            activityList.Columns.Add("Activity", 300);
-            activityList.Columns.Add("Status", 150);
+            infoList.Columns.Add("Field", 150);
+            infoList.Columns.Add("Value", 300);
 
-            // Add sample data
-            var items = new[]
+            if (currentStudent != null)
             {
-                new ListViewItem(new[] { "2024-03-20", "Submitted Assignment #3", "Completed" }),
-                new ListViewItem(new[] { "2024-03-19", "Attended Workshop", "Present" }),
-                new ListViewItem(new[] { "2024-03-18", "Project Meeting", "Completed" })
-            };
-            activityList.Items.AddRange(items);
+                var items = new[]
+                {
+                    new ListViewItem(new[] { "Email", currentStudent.email ?? "N/A" }),
+                    new ListViewItem(new[] { "Mentor", currentStudent.mentor_name ?? "N/A" }),
+                    new ListViewItem(new[] { "Advisor", currentStudent.advisor_name ?? "N/A" }),
+                    new ListViewItem(new[] { "Course Start", currentStudent.start_date ?? "N/A" }),
+                    new ListViewItem(new[] { "Course End", currentStudent.end_date ?? "N/A" }),
+                    new ListViewItem(new[] { "Program ID", currentStudent.program_id.ToString() }),
+                    new ListViewItem(new[] { "Branch ID", currentStudent.branch_id.ToString() }),
+                    new ListViewItem(new[] { "Release ID", currentStudent.release_id.ToString() })
+                };
+                infoList.Items.AddRange(items);
+            }
 
             activityPanel.Controls.Add(activityTitle);
-            activityPanel.Controls.Add(activityList);
+            activityPanel.Controls.Add(infoList);
 
             // Schedule Panel
             schedulePanel = new Panel
@@ -104,7 +118,7 @@ namespace Student_App.Forms
 
             var scheduleTitle = new Label
             {
-                Text = "Upcoming Schedule",
+                Text = "Working Schedule",
                 Font = AppFonts.Heading,
                 AutoSize = true,
                 Location = new Point(0, 0)
@@ -120,18 +134,21 @@ namespace Student_App.Forms
                 Font = AppFonts.Body
             };
 
-            scheduleList.Columns.Add("Time", 150);
-            scheduleList.Columns.Add("Subject", 300);
-            scheduleList.Columns.Add("Room", 150);
+            scheduleList.Columns.Add("Day", 150);
+            scheduleList.Columns.Add("Start Time", 150);
+            scheduleList.Columns.Add("End Time", 150);
 
-            // Add sample data
-            var scheduleItems = new[]
+            if (workingDays != null)
             {
-                new ListViewItem(new[] { "09:00 - 10:30", "Programming Fundamentals", "Room 101" }),
-                new ListViewItem(new[] { "11:00 - 12:30", "Database Design", "Room 203" }),
-                new ListViewItem(new[] { "14:00 - 15:30", "Web Development", "Room 105" })
-            };
-            scheduleList.Items.AddRange(scheduleItems);
+                var scheduleItems = workingDays.Select(day => 
+                    new ListViewItem(new[] { 
+                        day.day_name ?? "N/A",
+                        day.start_time ?? "N/A",
+                        day.end_time ?? "N/A"
+                    })
+                ).ToArray();
+                scheduleList.Items.AddRange(scheduleItems);
+            }
 
             schedulePanel.Controls.Add(scheduleTitle);
             schedulePanel.Controls.Add(scheduleList);

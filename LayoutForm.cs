@@ -8,13 +8,14 @@ namespace Student_App
     public partial class LayoutForm : Form
     {
         private bool disposedValue;
-        protected Panel mainContentPanel;
-        protected Panel headerPanel;
-        protected Panel sideMenuPanel;
-        protected Panel footerPanel;
-        protected Label titleLabel;
-        protected Label userLabel;
-        protected Panel contentWrapper;
+        protected Panel mainContentPanel = new();
+        protected Panel headerPanel = new();
+        protected Panel sideMenuPanel = new();
+        protected Panel footerPanel = new();
+        protected Label titleLabel = new();
+        protected Label userLabel = new();
+        protected Panel contentWrapper = new();
+        protected Dictionary<string, Button> menuButtons = new();
 
         public LayoutForm()
         {
@@ -34,90 +35,48 @@ namespace Student_App
         protected virtual void InitializeLayoutComponents()
         {
             // Header Panel
-            headerPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 60,
-                BackColor = AppColors.Primary
-            };
+            headerPanel.Dock = DockStyle.Top;
+            headerPanel.Height = 60;
+            headerPanel.BackColor = AppColors.Primary;
+            headerPanel.Padding = new Padding(20);
 
-            titleLabel = new Label
-            {
-                Text = "Student App",
-                ForeColor = Color.White,
-                Font = AppFonts.Title,
-                AutoSize = true,
-                Location = new Point(20, 15)
-            };
-
-            userLabel = new Label
-            {
-                Text = "Welcome",
-                ForeColor = Color.White,
-                Font = AppFonts.Body,
-                AutoSize = true,
-                Location = new Point(headerPanel.Width - 150, 20)
-            };
-
+            titleLabel.Text = "Student App";
+            titleLabel.ForeColor = Color.White;
+            titleLabel.Font = AppFonts.Title;
+            titleLabel.AutoSize = true;
+            titleLabel.Location = new Point(20, 15);
             headerPanel.Controls.Add(titleLabel);
+
+            userLabel.Text = "Welcome";
+            userLabel.ForeColor = Color.White;
+            userLabel.Font = AppFonts.Body;
+            userLabel.AutoSize = true;
+            userLabel.Location = new Point(headerPanel.Width - 150, 20);
             headerPanel.Controls.Add(userLabel);
 
             // Side Menu Panel
-            sideMenuPanel = new Panel
-            {
-                Dock = DockStyle.Left,
-                Width = 200,
-                BackColor = Color.FromArgb(51, 51, 54)
-            };
+            sideMenuPanel.Dock = DockStyle.Left;
+            sideMenuPanel.Width = 200;
+            sideMenuPanel.BackColor = Color.FromArgb(51, 51, 54);
+            sideMenuPanel.Padding = new Padding(10);
 
-            // Add menu items
-            var menuItems = new string[] { "Dashboard", "Reports", "Attendance", "Schedule", "Profile" };
-            var yPos = 20;
-            foreach (var item in menuItems)
-            {
-                var menuButton = new Button
-                {
-                    Text = item,
-                    FlatStyle = FlatStyle.Flat,
-                    ForeColor = Color.White,
-                    Font = AppFonts.Body,
-                    Size = new Size(180, 40),
-                    Location = new Point(10, yPos),
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    Padding = new Padding(20, 0, 0, 0),
-                    BackColor = Color.Transparent
-                };
-                menuButton.FlatAppearance.BorderSize = 0;
-                menuButton.MouseEnter += (s, e) => menuButton.BackColor = AppColors.Secondary;
-                menuButton.MouseLeave += (s, e) => menuButton.BackColor = Color.Transparent;
-
-                sideMenuPanel.Controls.Add(menuButton);
-                yPos += 50;
-            }
+            // Initialize menu items
+            InitializeMenuItems();
 
             // Content Wrapper (holds main content)
-            contentWrapper = new Panel
-            {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(20),
-                BackColor = AppColors.Background
-            };
+            contentWrapper.Dock = DockStyle.Fill;
+            contentWrapper.Padding = new Padding(20);
+            contentWrapper.BackColor = AppColors.Background;
 
             // Main Content Panel
-            mainContentPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                Padding = new Padding(20)
-            };
+            mainContentPanel.Dock = DockStyle.Fill;
+            mainContentPanel.BackColor = Color.White;
+            mainContentPanel.Padding = new Padding(20);
 
             // Footer Panel
-            footerPanel = new Panel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 30,
-                BackColor = AppColors.Primary
-            };
+            footerPanel.Dock = DockStyle.Bottom;
+            footerPanel.Height = 30;
+            footerPanel.BackColor = AppColors.Primary;
 
             var versionLabel = new Label
             {
@@ -172,6 +131,42 @@ namespace Student_App
             };
         }
 
+        private void InitializeMenuItems()
+        {
+            var menuItems = new[]
+            {
+                "Dashboard",
+                "Attendance",
+                "Reports",
+                "Settings"
+            };
+
+            int yPos = 20;
+            foreach (var item in menuItems)
+            {
+                var button = new Button
+                {
+                    Text = item,
+                    Width = sideMenuPanel.Width - 20,
+                    Height = 40,
+                    Location = new Point(10, yPos),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = AppColors.Secondary,
+                    ForeColor = Color.White,
+                    Font = AppFonts.Body,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Padding = new Padding(10, 0, 0, 0)
+                };
+
+                button.FlatAppearance.BorderSize = 0;
+                button.Click += (s, e) => HandleMenuClick(item);
+
+                menuButtons[item] = button;
+                sideMenuPanel.Controls.Add(button);
+                yPos += 50;
+            }
+        }
+
         [System.Runtime.InteropServices.DllImport("Gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
@@ -203,15 +198,24 @@ namespace Student_App
         }
 
         // Method to set active menu item
-        protected void SetActiveMenuItem(string menuName)
+        protected void SetActiveMenuItem(string menuItem)
         {
-            foreach (Control control in sideMenuPanel.Controls)
+            foreach (var button in menuButtons.Values)
             {
-                if (control is Button button)
-                {
-                    button.BackColor = button.Text == menuName ? AppColors.Secondary : Color.Transparent;
-                }
+                button.BackColor = AppColors.Secondary;
             }
+
+            if (menuButtons.ContainsKey(menuItem))
+            {
+                menuButtons[menuItem].BackColor = AppColors.Primary;
+            }
+        }
+
+        private void HandleMenuClick(string menuItem)
+        {
+            SetActiveMenuItem(menuItem);
+            // Handle menu item clicks here
+            MessageBox.Show($"{menuItem} clicked!");
         }
     }
 } 

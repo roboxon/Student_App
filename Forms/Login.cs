@@ -154,7 +154,10 @@ namespace Student_App.Forms
             {
                 LoginButton.Enabled = false;
                 LoginButton.Text = "Logging in...";
-                ErrorLabel.Text = "";
+                if (ErrorLabel != null)
+                {
+                    ErrorLabel.Text = "";
+                }
 
                 var content = new FormUrlEncodedContent(new[]
                 {
@@ -180,12 +183,12 @@ namespace Student_App.Forms
                     if (loginResponse?.data?.access_token != null && loginResponse.data.refresh_token != null)
                     {
                         TokenService.Instance.StoreTokens(loginResponse.data.access_token, loginResponse.data.refresh_token);
-                        var dashboard = new Dashboard();
+                        var dashboard = new Dashboard(loginResponse.data.student, loginResponse.data.days);
                         this.Hide();
                         dashboard.ShowDialog();
                         this.Close();
                     }
-                    else
+                    else if (ErrorLabel != null)
                     {
                         ErrorLabel.Text = "Invalid response format from server.";
                         MessageBox.Show("Invalid response format from server.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -206,26 +209,38 @@ namespace Student_App.Forms
                             errorMessage += $"\n{responseContent}";
                         }
                     }
-                    ErrorLabel.Text = errorMessage;
+                    if (ErrorLabel != null)
+                    {
+                        ErrorLabel.Text = errorMessage;
+                    }
                     MessageBox.Show(errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (HttpRequestException ex)
             {
                 var errorMessage = $"Network error: {ex.Message}";
-                ErrorLabel.Text = errorMessage;
+                if (ErrorLabel != null)
+                {
+                    ErrorLabel.Text = errorMessage;
+                }
                 MessageBox.Show(errorMessage, "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (JsonException ex)
             {
                 var errorMessage = $"Invalid response format: {ex.Message}";
-                ErrorLabel.Text = errorMessage;
+                if (ErrorLabel != null)
+                {
+                    ErrorLabel.Text = errorMessage;
+                }
                 MessageBox.Show(errorMessage, "Response Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
                 var errorMessage = $"An unexpected error occurred: {ex.Message}";
-                ErrorLabel.Text = errorMessage;
+                if (ErrorLabel != null)
+                {
+                    ErrorLabel.Text = errorMessage;
+                }
                 MessageBox.Show(errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
