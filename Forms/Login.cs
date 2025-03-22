@@ -12,6 +12,7 @@ using Student_App.Services.Configuration;
 using System.Text.Json;
 using System.Drawing.Drawing2D;
 using JsonException = System.Text.Json.JsonException;
+using System.Configuration;
 
 namespace Student_App.Forms
 {
@@ -27,6 +28,7 @@ namespace Student_App.Forms
         private TextBox? PasswordTextBox;
         private Button? LoginButton;
         private Label? ErrorLabel;
+        private CheckBox? RememberEmailCheckBox;
         private bool isDragging = false;
         private Point dragStart;
 
@@ -36,6 +38,40 @@ namespace Student_App.Forms
             _httpClient = new HttpClient();
             InitializeLoginControls();
             ApplyCommonStyling();
+            LoadSavedEmail();
+        }
+
+        private void LoadSavedEmail()
+        {
+            if (EmailTextBox != null)
+            {
+                var savedEmail = ConfigurationManager.AppSettings["RememberedEmail"];
+                if (!string.IsNullOrEmpty(savedEmail))
+                {
+                    EmailTextBox.Text = savedEmail;
+                    if (RememberEmailCheckBox != null)
+                    {
+                        RememberEmailCheckBox.Checked = true;
+                    }
+                }
+            }
+        }
+
+        private void SaveEmail(string email)
+        {
+            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            config.AppSettings.Settings.Remove("RememberedEmail");
+            config.AppSettings.Settings.Add("RememberedEmail", email);
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+        }
+
+        private void ClearSavedEmail()
+        {
+            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            config.AppSettings.Settings.Remove("RememberedEmail");
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
         }
 
         private void ApplyCommonStyling()
@@ -237,7 +273,7 @@ namespace Student_App.Forms
                 
                 var emailContainer = CreateTextBoxContainer(EmailTextBox, "Email Address");
                 emailContainer.Location = new Point(40, 140);
-                loginPanel.Controls.Add(emailContainer);
+                loginPanel?.Controls.Add(emailContainer);
             }
 
             // Style password textbox
@@ -250,7 +286,46 @@ namespace Student_App.Forms
 
                 var passwordContainer = CreateTextBoxContainer(PasswordTextBox, "Password");
                 passwordContainer.Location = new Point(40, 220);
-                loginPanel.Controls.Add(passwordContainer);
+                loginPanel?.Controls.Add(passwordContainer);
+            }
+
+            // Style remember email checkbox
+            if (RememberEmailCheckBox != null && loginPanel != null)
+            {
+                var checkboxContainer = new Panel
+                {
+                    Size = new Size(350, 35),
+                    Location = new Point(40, 270),
+                    BackColor = Color.White
+                };
+
+                RememberEmailCheckBox.Font = new Font(AppFonts.Body.FontFamily, 11);
+                RememberEmailCheckBox.ForeColor = Color.FromArgb(70, 70, 70);
+                RememberEmailCheckBox.Cursor = Cursors.Hand;
+                RememberEmailCheckBox.Location = new Point(0, 5);
+
+                // Add hover effect
+                RememberEmailCheckBox.MouseEnter += (s, e) => 
+                {
+                    RememberEmailCheckBox.ForeColor = AppColors.Secondary;
+                };
+                RememberEmailCheckBox.MouseLeave += (s, e) => 
+                {
+                    RememberEmailCheckBox.ForeColor = Color.FromArgb(70, 70, 70);
+                };
+
+                checkboxContainer.Controls.Add(RememberEmailCheckBox);
+                loginPanel.Controls.Add(checkboxContainer);
+
+                // Update other control positions
+                if (LoginButton != null)
+                {
+                    LoginButton.Location = new Point(40, 315);
+                }
+                if (ErrorLabel != null)
+                {
+                    ErrorLabel.Location = new Point(40, 370);
+                }
             }
 
             // Style login button
@@ -260,7 +335,6 @@ namespace Student_App.Forms
                 LoginButton.BackColor = AppColors.Secondary;
                 LoginButton.ForeColor = Color.White;
                 LoginButton.Size = new Size(350, 45);
-                LoginButton.Location = new Point(40, 300);
                 LoginButton.Font = new Font(AppFonts.Body.FontFamily, 12, FontStyle.Bold);
                 LoginButton.Cursor = Cursors.Hand;
                 LoginButton.FlatAppearance.BorderSize = 0;
@@ -272,6 +346,8 @@ namespace Student_App.Forms
                     Math.Max(0, AppColors.Secondary.B - 20)
                 );
                 LoginButton.MouseLeave += (s, e) => LoginButton.BackColor = AppColors.Secondary;
+
+                loginPanel?.Controls.Add(LoginButton);
             }
 
             // Style error label
@@ -280,15 +356,13 @@ namespace Student_App.Forms
                 ErrorLabel.Font = AppFonts.Small;
                 ErrorLabel.ForeColor = AppColors.Error;
                 ErrorLabel.AutoSize = true;
-                ErrorLabel.Location = new Point(40, 355);
                 ErrorLabel.MaximumSize = new Size(350, 0);
+                loginPanel?.Controls.Add(ErrorLabel);
             }
 
             // Add controls to login panel
             loginPanel.Controls.Add(closeButton);
             loginPanel.Controls.Add(titleLabel);
-            if (LoginButton != null) loginPanel.Controls.Add(LoginButton);
-            if (ErrorLabel != null) loginPanel.Controls.Add(ErrorLabel);
 
             // Add panels to form
             mainContainer.Controls.Add(loginPanel);
@@ -362,11 +436,24 @@ namespace Student_App.Forms
                 PlaceholderText = "Enter your password"
             };
 
+            // Create and configure remember email checkbox
+            RememberEmailCheckBox = new CheckBox
+            {
+                Name = "RememberEmailCheckBox",
+                Text = "Remember Email",
+                AutoSize = true,
+                Font = new Font(AppFonts.Body.FontFamily, 11, FontStyle.Regular),
+                ForeColor = Color.FromArgb(70, 70, 70),
+                Location = new Point(40, 270),
+                Padding = new Padding(0, 5, 0, 5)
+            };
+
             // Create and configure login button
             LoginButton = new Button
             {
                 Name = "LoginButton",
-                Text = "Sign In"
+                Text = "Sign In",
+                Location = new Point(40, 310)
             };
             LoginButton.Click += LoginButton_Click;
 
@@ -375,13 +462,14 @@ namespace Student_App.Forms
             {
                 Name = "ErrorLabel",
                 Text = "",
-                AutoSize = true
+                AutoSize = true,
+                Location = new Point(40, 365)
             };
         }
 
         private async void LoginButton_Click(object? sender, EventArgs e)
         {
-            if (EmailTextBox == null || PasswordTextBox == null || LoginButton == null)
+            if (EmailTextBox == null || PasswordTextBox == null || LoginButton == null || RememberEmailCheckBox == null)
             {
                 MessageBox.Show("Error: Form controls not initialized", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
@@ -400,6 +488,16 @@ namespace Student_App.Forms
                 if (ErrorLabel != null)
                 {
                     ErrorLabel.Text = "";
+                }
+
+                // Handle remember email
+                if (RememberEmailCheckBox.Checked)
+                {
+                    SaveEmail(EmailTextBox.Text);
+                }
+                else
+                {
+                    ClearSavedEmail();
                 }
 
                 var content = new FormUrlEncodedContent(new[]
