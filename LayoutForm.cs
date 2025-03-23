@@ -1,7 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using Student_App.Services.Configuration;
+using Student_App.UI;
 using Student_App.Forms;
 
 namespace Student_App

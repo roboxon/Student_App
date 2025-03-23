@@ -1,6 +1,7 @@
+using System;
 using System.Drawing;
 using System.Windows.Forms;
-using Student_App.Services.Configuration;
+using Student_App.UI;
 using Student_App.Models;
 using Student_App.Forms;
 using System.IO;
@@ -12,8 +13,8 @@ namespace Student_App.Forms
         private Panel statsPanel = new();
         private Panel studentInfoPanel = new();
         private Panel curriculumPanel = new();
+        private CurriculumView curriculumView = new();
         private Student? currentStudent;
-        private Release? currentRelease;
         private System.ComponentModel.IContainer components = null;
 
         public Dashboard(Student student)
@@ -41,206 +42,22 @@ namespace Student_App.Forms
             LoadReleaseDataAsync();
         }
 
-        private async void LoadReleaseDataAsync()
+        private void LoadReleaseDataAsync()
         {
             try
             {
-                // Show loading indicator
-                var loadingPanel = new Panel
-                {
-                    Dock = DockStyle.Fill,
-                    BackColor = Color.FromArgb(100, 255, 255, 255)
-                };
-                
-                var loadingLabel = new Label
-                {
-                    Text = "Loading curriculum data...",
-                    AutoSize = false,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Dock = DockStyle.Fill,
-                    Font = new Font(AppFonts.Body.FontFamily, 12, FontStyle.Bold)
-                };
-                
-                loadingPanel.Controls.Add(loadingLabel);
-                loadingPanel.Tag = "LoadingPanel";
-                
-                mainContentPanel.Controls.Add(loadingPanel);
-                loadingPanel.BringToFront();
-                
                 // Ensure currentStudent is not null before calling API
                 if (currentStudent != null)
                 {
-                    // Load release data
-                    currentRelease = await Release.GetReleaseAsync(currentStudent);
-                    
-                    // Update UI with the data
-                    UpdateCurriculumPanel();
+                    // Use the CurriculumView to load release data
+                    curriculumView.LoadRelease(currentStudent);
                 }
-                
-                // Remove loading panel
-                mainContentPanel.Controls.Remove(loadingPanel);
-                loadingPanel.Dispose();
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to load curriculum data: {ex.Message}", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
-                
-                // Clean up loading panel if it exists
-                foreach (Control c in mainContentPanel.Controls)
-                {
-                    if (c is Panel p && p.Tag?.ToString() == "LoadingPanel")
-                    {
-                        mainContentPanel.Controls.Remove(p);
-                        p.Dispose();
-                        break;
-                    }
-                }
             }
-        }
-
-        private void UpdateCurriculumPanel()
-        {
-            if (currentRelease == null || currentRelease.content == null)
-                return;
-            
-            // Clear existing controls except the loading panel
-            foreach (Control control in curriculumPanel.Controls)
-            {
-                if (control is Panel panel && panel.Tag?.ToString() != "LoadingPanel")
-                {
-                    curriculumPanel.Controls.Remove(control);
-                    control.Dispose();
-                }
-            }
-            
-            // Add title for the curriculum panel
-            var titleLabel = new Label
-            {
-                Text = $"Curriculum: {currentRelease.title}",
-                Font = new Font(AppFonts.Heading.FontFamily, 14, FontStyle.Bold),
-                ForeColor = AppColors.Text,
-                AutoSize = true,
-                Location = new Point(10, 10)
-            };
-            curriculumPanel.Controls.Add(titleLabel);
-            
-            // Add program description
-            var programDescLabel = new Label
-            {
-                Text = currentRelease.content.program?.program_description ?? "No description available",
-                Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Regular),
-                ForeColor = AppColors.Secondary,
-                AutoSize = false,
-                Size = new Size(curriculumPanel.Width - 40, 40),
-                Location = new Point(10, 40)
-            };
-            curriculumPanel.Controls.Add(programDescLabel);
-            
-            // Create the curriculum tree view
-            var treeView = new TreeView
-            {
-                Location = new Point(10, 90),
-                Size = new Size(curriculumPanel.Width - 40, curriculumPanel.Height - 100),
-                Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Regular),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
-                ShowNodeToolTips = true
-            };
-            
-            // Populate the tree with subjects and topics
-            if (currentRelease.content.subjects != null)
-            {
-                foreach (var subjectWithTopics in currentRelease.content.subjects)
-                {
-                    if (subjectWithTopics.subject == null)
-                        continue;
-                    
-                    var subject = subjectWithTopics.subject;
-                    var subjectNode = new TreeNode(subject.subject_name ?? "Unnamed Subject");
-                    subjectNode.ToolTipText = subject.subject_description;
-                    subjectNode.Tag = subject;
-                    
-                    // Add details to node text
-                    subjectNode.Text = $"{subject.subject_name} ({subject.subject_hours} hours)";
-                    
-                    // Add topics as child nodes
-                    if (subjectWithTopics.topics != null)
-                    {
-                        foreach (var topicWithLessons in subjectWithTopics.topics)
-                        {
-                            if (topicWithLessons.topic == null)
-                                continue;
-                            
-                            var topic = topicWithLessons.topic;
-                            var topicNode = new TreeNode(topic.topic_name ?? "Unnamed Topic");
-                            topicNode.ToolTipText = topic.topic_description;
-                            topicNode.Tag = topic;
-                            
-                            // Add details to node text
-                            topicNode.Text = $"{topic.topic_name} ({topic.topic_hours} hours)";
-                            
-                            // Add lessons as child nodes
-                            if (topicWithLessons.lessons != null)
-                            {
-                                foreach (var lesson in topicWithLessons.lessons)
-                                {
-                                    var lessonNode = new TreeNode(lesson.lesson_name ?? "Unnamed Lesson");
-                                    lessonNode.ToolTipText = lesson.lesson_description;
-                                    lessonNode.Tag = lesson;
-                                    
-                                    // Add details to node text
-                                    lessonNode.Text = $"{lesson.lesson_name} ({lesson.lesson_hours} hours)";
-                                    
-                                    topicNode.Nodes.Add(lessonNode);
-                                }
-                            }
-                            
-                            // Add resources as a special node if they exist
-                            if (topicWithLessons.resources != null && topicWithLessons.resources.Count > 0)
-                            {
-                                var resourcesNode = new TreeNode("Resources");
-                                resourcesNode.ForeColor = AppColors.Primary;
-                                
-                                foreach (var resource in topicWithLessons.resources)
-                                {
-                                    var resourceNode = new TreeNode(resource.description ?? "Unnamed Resource");
-                                    resourceNode.ToolTipText = resource.url_link;
-                                    resourceNode.Tag = resource;
-                                    resourcesNode.Nodes.Add(resourceNode);
-                                }
-                                
-                                topicNode.Nodes.Add(resourcesNode);
-                            }
-                            
-                            subjectNode.Nodes.Add(topicNode);
-                        }
-                    }
-                    
-                    treeView.Nodes.Add(subjectNode);
-                }
-            }
-            
-            // Set up event handler for node double-click (for resources)
-            treeView.NodeMouseDoubleClick += (s, e) => {
-                if (e.Node.Tag is Resource resource && !string.IsNullOrEmpty(resource.url_link))
-                {
-                    try
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = resource.url_link,
-                            UseShellExecute = true
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Could not open URL: {ex.Message}", "Error", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            };
-            
-            curriculumPanel.Controls.Add(treeView);
         }
 
         protected override void InitializeComponent()
@@ -319,7 +136,7 @@ namespace Student_App.Forms
             var infoTitle = new Label
             {
                 Text = "Student Information",
-                Font = new Font(AppFonts.Heading.FontFamily, 12, FontStyle.Bold),
+                Font = new Font(AppFonts.Title.FontFamily, 12, FontStyle.Bold),
                 ForeColor = AppColors.Text,
                 AutoSize = true,
                 Location = new Point(5, 5)
@@ -404,6 +221,10 @@ namespace Student_App.Forms
                 Padding = new Padding(10, 10, 10, 10),
                 BorderStyle = BorderStyle.None
             };
+            
+            // Add the curriculum view to the curriculum panel
+            curriculumView.Dock = DockStyle.Fill;
+            curriculumPanel.Controls.Add(curriculumView);
             
             // Add panels to main content in new order
             mainContentPanel.Controls.Add(curriculumPanel);

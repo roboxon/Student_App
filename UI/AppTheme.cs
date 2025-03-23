@@ -9,6 +9,7 @@ namespace Student_App.UI
         public static readonly Color Success = Color.FromArgb(40, 167, 69);
         public static readonly Color Error = Color.FromArgb(220, 53, 69);
         public static readonly Color Text = Color.FromArgb(33, 37, 41);
+        public static readonly Color Background = Color.White;
     }
 
     public static class AppFonts
