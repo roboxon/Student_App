@@ -16,6 +16,14 @@ namespace Student_App.Forms
 
         public Dashboard(Student? student = null, List<WorkingDay>? days = null)
         {
+            if (student == null)
+            {
+                MessageBox.Show("No student information available. Redirecting to login.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                var loginForm = new Login();
+                loginForm.Show();
+                this.Close();
+                return;
+            }
             currentStudent = student;
             workingDays = days;
             InitializeComponent();
