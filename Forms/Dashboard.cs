@@ -14,7 +14,7 @@ namespace Student_App.Forms
         private Panel schedulePanel = new();
         private Student? currentStudent;
         private List<WorkingDay>? workingDays;
-        private readonly SystemTrayApplication systemTray;
+        private new readonly SystemTrayApplication systemTray;
         private System.ComponentModel.IContainer components = null;
 
         public Dashboard(Student student)

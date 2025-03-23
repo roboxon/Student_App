@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Student_App.Services.Configuration;
+using Student_App.Forms;
 
 namespace Student_App
 {
@@ -16,11 +17,13 @@ namespace Student_App
         protected Label userLabel = new();
         protected Panel contentWrapper = new();
         protected Dictionary<string, Button> menuButtons = new();
+        protected SystemTrayApplication? systemTray;
 
         public LayoutForm()
         {
             InitializeComponent();
             InitializeLayoutComponents();
+            InitializeSystemTray();
         }
 
         protected virtual void InitializeComponent()
@@ -131,6 +134,30 @@ namespace Student_App
             };
         }
 
+        protected virtual void InitializeSystemTray()
+        {
+            systemTray = new SystemTrayApplication(this);
+            
+            // Handle minimize to tray
+            this.Resize += (s, e) =>
+            {
+                if (WindowState == FormWindowState.Minimized)
+                {
+                    Hide();
+                }
+            };
+
+            // Handle form closing
+            this.FormClosing += (s, e) =>
+            {
+                if (e.CloseReason == CloseReason.UserClosing)
+                {
+                    e.Cancel = true;
+                    Hide();
+                }
+            };
+        }
+
         private void InitializeMenuItems()
         {
             var menuItems = new[]
@@ -176,6 +203,7 @@ namespace Student_App
             {
                 if (disposing)
                 {
+                    systemTray?.Dispose();
                     mainContentPanel?.Dispose();
                     headerPanel?.Dispose();
                     sideMenuPanel?.Dispose();

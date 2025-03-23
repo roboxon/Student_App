@@ -16,6 +16,27 @@ namespace Student_App
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
             
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            // Handle application exit
+            Application.ApplicationExit += (s, e) =>
+            {
+                // Ensure cleanup of any remaining system tray icons
+                foreach (var process in System.Diagnostics.Process.GetProcessesByName("Student_App"))
+                {
+                    try
+                    {
+                        if (process.Id != System.Diagnostics.Process.GetCurrentProcess().Id)
+                        {
+                            process.Kill();
+                        }
+                    }
+                    catch { }
+                }
+            };
+
             // Start with the login form
             Application.Run(new Login());
         }
