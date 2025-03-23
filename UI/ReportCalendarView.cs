@@ -26,7 +26,7 @@ namespace Student_App.UI
         
         private void InitializeComponent()
         {
-            this.Size = new Size(300, 300);
+            this.Size = new Size(230, 200);
             
             calendar = new MonthCalendar
             {
@@ -34,7 +34,7 @@ namespace Student_App.UI
                 MaxSelectionCount = 7,
                 ShowWeekNumbers = true,
                 FirstDayOfWeek = Day.Monday,
-                CalendarDimensions = new Size(1, 2)
+                CalendarDimensions = new Size(1, 1) // Only show one month
             };
             
             calendar.DateSelected += Calendar_DateSelected;

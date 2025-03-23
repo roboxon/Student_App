@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Student_App.Models;
 using Student_App.Services.Reports;
 using Student_App.UI;
-using System.Collections.Generic;
 
 namespace Student_App.Forms
 {
@@ -16,21 +17,22 @@ namespace Student_App.Forms
         private DateTime selectedWeekStart;
         
         // UI Controls
-        private ReportCalendarView calendarView;
+        private Panel calendarPanel;
+        private MonthCalendar calendar;
         private TabControl dailyTabs;
-        private Panel summaryPanel;
-        private RichTextBox weeklySummaryBox;
+        private TextBox weeklySummaryBox;
         private Button saveLocalButton;
         private Button submitButton;
         private Label statusLabel;
+        private Label weekRangeLabel;
         
         public WeeklyReportForm(Student student)
         {
             currentStudent = student;
             selectedWeekStart = GetCurrentWeekStart();
-            InitializeComponent();
+            InitializeWeeklyReportComponents();
             SetActiveMenuItem("Reports");
-            UpdateUserInfo($"{student.first_name} {student.last_name}");
+            UpdateUserInfo($"{student?.first_name} {student?.last_name}");
             titleLabel.Text = "Weekly Reports";
         }
         
@@ -41,60 +43,146 @@ namespace Student_App.Forms
             return now.AddDays(-1 * diff);
         }
         
-        protected override void InitializeComponent()
+        protected void InitializeWeeklyReportComponents()
         {
-            base.InitializeComponent();
-            
-            // Calendar Panel (left side)
-            var calendarPanel = new Panel
+            // Back button to return to dashboard
+            var backButton = new Button
             {
-                Dock = DockStyle.Left,
-                Width = 300,
+                Text = "Back to Dashboard",
+                Width = 150,
+                Height = 30,
+                BackColor = AppColors.Secondary,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Location = new Point(10, 15)
+            };
+            backButton.FlatAppearance.BorderSize = 0;
+            backButton.Click += BackButton_Click;
+            headerPanel.Controls.Add(backButton);
+            
+            // Main container with three sections
+            var mainContainer = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 2,
+                BackColor = Color.White
+            };
+            
+            mainContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30F));
+            mainContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70F));
+            mainContainer.RowStyles.Add(new RowStyle(SizeType.Percent, 70F));
+            mainContainer.RowStyles.Add(new RowStyle(SizeType.Percent, 30F));
+            
+            // 1. LEFT PANEL: Calendar and status
+            calendarPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = AppColors.LightGray,
                 Padding = new Padding(10)
             };
             
-            calendarView = new ReportCalendarView(currentStudent);
-            calendarView.Dock = DockStyle.Fill;
-            calendarView.WeekSelected += CalendarView_WeekSelected;
-            calendarPanel.Controls.Add(calendarView);
+            var instructionsLabel = new Label
+            {
+                Text = "Select a week to create/edit reports:",
+                AutoSize = true,
+                Font = AppFonts.BoldSmall,
+                Location = new Point(10, 10)
+            };
+            calendarPanel.Controls.Add(instructionsLabel);
             
-            // Daily Tabs (center/right)
+            // Create single calendar
+            calendar = new MonthCalendar
+            {
+                MaxSelectionCount = 7,
+                ShowWeekNumbers = true,
+                FirstDayOfWeek = Day.Monday,
+                CalendarDimensions = new Size(1, 1),
+                Location = new Point(10, 40)
+            };
+            
+            calendar.DateSelected += Calendar_DateSelected;
+            calendarPanel.Controls.Add(calendar);
+            
+            // Status indicators for calendar
+            var statusPanel = new Panel
+            {
+                Width = 200,
+                Height = 120,
+                Location = new Point(10, 230)
+            };
+            
+            AddStatusIndicator(statusPanel, AppColors.Success, "Complete", 0);
+            AddStatusIndicator(statusPanel, Color.Orange, "Partial", 30);
+            AddStatusIndicator(statusPanel, AppColors.Secondary, "Not Started", 60);
+            calendarPanel.Controls.Add(statusPanel);
+            
+            // 2. TOP RIGHT: Daily tabs
+            var tabsPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(10)
+            };
+            
+            weekRangeLabel = new Label
+            {
+                Text = $"Week of: {selectedWeekStart:MMM dd, yyyy} to {selectedWeekStart.AddDays(6):MMM dd, yyyy}",
+                Font = AppFonts.Bold,
+                AutoSize = true,
+                Location = new Point(0, 10)
+            };
+            tabsPanel.Controls.Add(weekRangeLabel);
+            
             dailyTabs = new TabControl
             {
                 Dock = DockStyle.Fill,
-                
+                Location = new Point(0, 40),
+                Size = new Size(tabsPanel.Width, tabsPanel.Height - 50)
             };
+            tabsPanel.Controls.Add(dailyTabs);
             
-            // Summary Panel (bottom)
-            summaryPanel = new Panel
+            // 3. BOTTOM RIGHT: Weekly summary and buttons
+            var summaryPanel = new Panel
             {
-                Dock = DockStyle.Bottom,
-                Height = 150,
+                Dock = DockStyle.Fill,
                 Padding = new Padding(10)
             };
             
             var summaryLabel = new Label
             {
                 Text = "Weekly Summary:",
+                Font = AppFonts.Bold,
                 AutoSize = true,
-                Font = AppFonts.Bold
+                Location = new Point(0, 10)
             };
+            summaryPanel.Controls.Add(summaryLabel);
             
-            weeklySummaryBox = new RichTextBox
+            weeklySummaryBox = new TextBox
             {
-                Dock = DockStyle.Bottom,
-                Height = 100
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Location = new Point(0, 40),
+                Size = new Size(summaryPanel.Width - 20, 60)
+            };
+            summaryPanel.Controls.Add(weeklySummaryBox);
+            
+            // Action buttons
+            var buttonsPanel = new Panel
+            {
+                Width = summaryPanel.Width - 20,
+                Height = 40,
+                Location = new Point(0, 110)
             };
             
-            // Action Buttons
             saveLocalButton = new Button
             {
                 Text = "Save Report Locally",
                 Width = 150,
-                Height = 30,
+                Height = 35,
                 BackColor = AppColors.Primary,
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Location = new Point(0, 0)
             };
             saveLocalButton.Click += SaveLocalButton_Click;
             
@@ -102,44 +190,94 @@ namespace Student_App.Forms
             {
                 Text = "Submit Report",
                 Width = 150,
-                Height = 30,
+                Height = 35,
                 BackColor = AppColors.Success,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Left = 160
+                Location = new Point(160, 0)
             };
             submitButton.Click += SubmitButton_Click;
             
             statusLabel = new Label
             {
-                Text = "Select a week to begin",
+                Text = "Select a week to get started",
                 AutoSize = true,
-                Top = 35
+                Location = new Point(320, 10),
+                ForeColor = AppColors.Secondary
             };
             
-            // Add controls
-            summaryPanel.Controls.Add(summaryLabel);
-            summaryPanel.Controls.Add(weeklySummaryBox);
-            summaryPanel.Controls.Add(saveLocalButton);
-            summaryPanel.Controls.Add(submitButton);
-            summaryPanel.Controls.Add(statusLabel);
+            buttonsPanel.Controls.Add(saveLocalButton);
+            buttonsPanel.Controls.Add(submitButton);
+            buttonsPanel.Controls.Add(statusLabel);
+            summaryPanel.Controls.Add(buttonsPanel);
+            
+            // Add panels to table layout
+            mainContainer.Controls.Add(calendarPanel, 0, 0);
+            mainContainer.Controls.Add(tabsPanel, 1, 0);
+            mainContainer.Controls.Add(summaryPanel, 1, 1);
+            mainContainer.SetRowSpan(calendarPanel, 2);
             
             // Add to main content
-            mainContentPanel.Controls.Add(dailyTabs);
-            mainContentPanel.Controls.Add(summaryPanel);
-            mainContentPanel.Controls.Add(calendarPanel);
+            mainContentPanel.Controls.Add(mainContainer);
             
             // Load initial report
             LoadWeeklyReport();
         }
         
-        private void CalendarView_WeekSelected(object sender, DateTime weekStart)
+        // Helper method to add status indicators
+        private void AddStatusIndicator(Panel container, Color color, string text, int yOffset)
         {
-            if (weekStart != selectedWeekStart)
+            var indicator = new Panel
             {
-                selectedWeekStart = weekStart;
-                LoadWeeklyReport();
+                BackColor = color,
+                Size = new Size(16, 16),
+                Location = new Point(0, yOffset + 2)
+            };
+            
+            var label = new Label
+            {
+                Text = text,
+                AutoSize = true,
+                Location = new Point(25, yOffset)
+            };
+            
+            container.Controls.Add(indicator);
+            container.Controls.Add(label);
+        }
+        
+        private void Calendar_DateSelected(object sender, DateRangeEventArgs e)
+        {
+            try
+            {
+                // Find the start of the selected week
+                DateTime firstDay = e.Start;
+                int diff = (7 + (firstDay.DayOfWeek - DayOfWeek.Monday)) % 7;
+                DateTime weekStart = firstDay.AddDays(-1 * diff);
+                
+                // Ensure we select the entire week
+                calendar.SelectionStart = weekStart;
+                calendar.SelectionEnd = weekStart.AddDays(6);
+                
+                if (weekStart != selectedWeekStart)
+                {
+                    selectedWeekStart = weekStart;
+                    weekRangeLabel.Text = $"Week of: {selectedWeekStart:MMM dd, yyyy} to {selectedWeekStart.AddDays(6):MMM dd, yyyy}";
+                    LoadWeeklyReport();
+                }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting date: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        private void BackButton_Click(object sender, EventArgs e)
+        {
+            // Show Dashboard again with the current student
+            var dashboard = new Dashboard(currentStudent);
+            dashboard.Show();
+            this.Close();
         }
         
         private async void LoadWeeklyReport()
@@ -208,8 +346,8 @@ namespace Student_App.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading report: {ex.Message}\n\n{ex.StackTrace}", 
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error loading report: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         
@@ -230,39 +368,90 @@ namespace Student_App.Forms
                 // Add tabs for each daily report
                 foreach (var dailyReport in currentReport.DailyReports)
                 {
-                    var tabPage = new TabPage(dailyReport.Date.ToString("dddd, MMM dd"));
+                    // Format the day name
+                    string dayName = dailyReport.Date.ToString("dddd, MMM dd");
+                    var tabPage = new TabPage(dayName);
                     
-                    // Create hourly report panel
-                    var hourlyPanel = new Panel
+                    // Container with padding
+                    var container = new Panel
                     {
                         Dock = DockStyle.Fill,
-                        AutoScroll = true
+                        Padding = new Padding(15)
+                    };
+                    
+                    // Daily summary
+                    var dailySummaryLabel = new Label
+                    {
+                        Text = "Daily Summary:",
+                        Font = AppFonts.Bold,
+                        Location = new Point(0, 10),
+                        AutoSize = true
+                    };
+                    
+                    var dailySummaryBox = new TextBox
+                    {
+                        Width = tabPage.Width - 40,
+                        Height = 60,
+                        Multiline = true,
+                        Location = new Point(0, 40),
+                        Text = dailyReport.DailySummary ?? "",
+                        Tag = dailyReport  // Store reference to the daily report
+                    };
+                    
+                    dailySummaryBox.TextChanged += DailySummaryBox_TextChanged;
+                    
+                    // Hourly reports header
+                    var hourlyLabel = new Label
+                    {
+                        Text = "Hourly Reports:",
+                        Font = AppFonts.Bold,
+                        Location = new Point(0, 110),
+                        AutoSize = true
+                    };
+                    
+                    // Hourly reports container with scroll
+                    var hourlyContainer = new Panel
+                    {
+                        Width = tabPage.Width - 40,
+                        Height = 400,
+                        Location = new Point(0, 140),
+                        AutoScroll = true,
+                        BorderStyle = BorderStyle.FixedSingle
                     };
                     
                     int yPos = 10;
                     
-                    // Add hourly report rows - but check for null first
+                    // Add hourly report rows
                     if (dailyReport.HourlyReports != null)
                     {
                         foreach (var hourlyReport in dailyReport.HourlyReports)
                         {
-                            // Only add controls if the hourly report is valid
                             if (hourlyReport != null)
                             {
+                                // Hour row panel
+                                var hourPanel = new Panel
+                                {
+                                    Width = hourlyContainer.Width - 25,
+                                    Height = 85,
+                                    Location = new Point(5, yPos),
+                                    BackColor = Color.FromArgb(250, 250, 250),
+                                    BorderStyle = BorderStyle.FixedSingle
+                                };
+                                
                                 // Time label
                                 var timeLabel = new Label
                                 {
                                     Text = hourlyReport.TimeRange ?? "Unknown time",
-                                    Width = 80,
-                                    Location = new Point(10, yPos + 5),
+                                    Width = 100,
+                                    Location = new Point(10, 10),
                                     Font = AppFonts.Bold
                                 };
                                 
                                 // Subject/Topic dropdown
                                 var subjectDropdown = new ComboBox
                                 {
-                                    Width = 200,
-                                    Location = new Point(100, yPos),
+                                    Width = 220,
+                                    Location = new Point(120, 8),
                                     DropDownStyle = ComboBoxStyle.DropDownList,
                                     Tag = hourlyReport  // Store reference to the hourly report
                                 };
@@ -276,87 +465,57 @@ namespace Student_App.Forms
                                 subjectDropdown.SelectedIndex = 0;
                                 if (hourlyReport.SubjectId > 0)
                                 {
-                                    // Try to select the right item based on subjectId
-                                    // In real implementation, we'd match with actual data
                                     subjectDropdown.SelectedIndex = hourlyReport.SubjectId % 3 + 1;
                                 }
                                 
                                 subjectDropdown.SelectedIndexChanged += SubjectDropdown_SelectedIndexChanged;
                                 
+                                // Learning description
+                                var descriptionLabel = new Label
+                                {
+                                    Text = "Description:",
+                                    Location = new Point(10, 45),
+                                    AutoSize = true
+                                };
+                                
                                 // Description textbox
                                 var descriptionBox = new TextBox
                                 {
-                                    Width = 400,
-                                    Height = 50,
-                                    Multiline = true,
-                                    Location = new Point(310, yPos),
+                                    Width = hourPanel.Width - 150,
+                                    Height = 25,
+                                    Location = new Point(120, 42),
                                     Text = hourlyReport.LearningDescription ?? "",
                                     Tag = hourlyReport  // Store reference to the hourly report
                                 };
                                 
                                 descriptionBox.TextChanged += DescriptionBox_TextChanged;
                                 
-                                // Status indicator
-                                var statusIcon = new Panel
-                                {
-                                    Width = 16,
-                                    Height = 16,
-                                    Location = new Point(720, yPos + 5),
-                                    BackColor = hourlyReport.IsSubmitted ? AppColors.Success : AppColors.Secondary
-                                };
+                                // Add controls to hour panel
+                                hourPanel.Controls.Add(timeLabel);
+                                hourPanel.Controls.Add(subjectDropdown);
+                                hourPanel.Controls.Add(descriptionLabel);
+                                hourPanel.Controls.Add(descriptionBox);
                                 
-                                // Add controls
-                                hourlyPanel.Controls.Add(timeLabel);
-                                hourlyPanel.Controls.Add(subjectDropdown);
-                                hourlyPanel.Controls.Add(descriptionBox);
-                                hourlyPanel.Controls.Add(statusIcon);
+                                // Add hour panel to container
+                                hourlyContainer.Controls.Add(hourPanel);
                             }
                             
-                            yPos += 60;
+                            yPos += 95;
                         }
                     }
                     
-                    // Daily summary
-                    var dailySummaryLabel = new Label
-                    {
-                        Text = "Daily Summary:",
-                        Location = new Point(10, yPos + 10),
-                        Font = AppFonts.Bold,
-                        AutoSize = true
-                    };
+                    container.Controls.Add(dailySummaryLabel);
+                    container.Controls.Add(dailySummaryBox);
+                    container.Controls.Add(hourlyLabel);
+                    container.Controls.Add(hourlyContainer);
                     
-                    var dailySummaryBox = new TextBox
-                    {
-                        Width = 600,
-                        Height = 60,
-                        Multiline = true,
-                        Location = new Point(10, yPos + 30),
-                        Text = dailyReport.DailySummary ?? "",
-                        Tag = dailyReport  // Store reference to the daily report
-                    };
-                    
-                    dailySummaryBox.TextChanged += DailySummaryBox_TextChanged;
-                    
-                    hourlyPanel.Controls.Add(dailySummaryLabel);
-                    hourlyPanel.Controls.Add(dailySummaryBox);
-                    
-                    // Add to tab
-                    tabPage.Controls.Add(hourlyPanel);
+                    // Add container to tab
+                    tabPage.Controls.Add(container);
                     dailyTabs.TabPages.Add(tabPage);
                 }
                 
                 // Update weekly summary
                 weeklySummaryBox.Text = currentReport.WeeklySummary ?? "";
-                
-                // Update the calendar display (in case status changed)
-                try
-                {
-                    calendarView.RefreshCalendar();
-                }
-                catch (Exception)
-                {
-                    // Ignore calendar refresh errors
-                }
             }
             catch (Exception ex)
             {
@@ -367,88 +526,129 @@ namespace Student_App.Forms
         
         private void SubjectDropdown_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var dropdown = (ComboBox)sender;
-            var hourlyReport = (HourlyReport)dropdown.Tag;
-            
-            if (dropdown.SelectedIndex > 0)
+            try
             {
-                // In a real app, we'd get actual subject/topic IDs
-                int subjectId = dropdown.SelectedIndex;
-                hourlyReport.SubjectId = subjectId;
-                hourlyReport.SubjectName = dropdown.SelectedItem.ToString();
-                hourlyReport.LastUpdated = DateTime.Now;
+                var dropdown = (ComboBox)sender;
+                var hourlyReport = (HourlyReport)dropdown.Tag;
+                
+                if (dropdown.SelectedIndex > 0)
+                {
+                    // In a real app, we'd get actual subject/topic IDs
+                    int subjectId = dropdown.SelectedIndex;
+                    hourlyReport.SubjectId = subjectId;
+                    hourlyReport.SubjectName = dropdown.SelectedItem.ToString();
+                    hourlyReport.LastUpdated = DateTime.Now;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error updating subject: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         
         private void DescriptionBox_TextChanged(object sender, EventArgs e)
         {
-            var textBox = (TextBox)sender;
-            var hourlyReport = (HourlyReport)textBox.Tag;
-            
-            hourlyReport.LearningDescription = textBox.Text;
-            hourlyReport.LastUpdated = DateTime.Now;
+            try
+            {
+                var textBox = (TextBox)sender;
+                var hourlyReport = (HourlyReport)textBox.Tag;
+                
+                hourlyReport.LearningDescription = textBox.Text;
+                hourlyReport.LastUpdated = DateTime.Now;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error updating description: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         
         private void DailySummaryBox_TextChanged(object sender, EventArgs e)
         {
-            var textBox = (TextBox)sender;
-            var dailyReport = (DailyReport)textBox.Tag;
-            
-            dailyReport.DailySummary = textBox.Text;
+            try
+            {
+                var textBox = (TextBox)sender;
+                var dailyReport = (DailyReport)textBox.Tag;
+                
+                dailyReport.DailySummary = textBox.Text;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error updating daily summary: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         
         private async void SaveLocalButton_Click(object sender, EventArgs e)
         {
-            // Update weekly summary
-            currentReport.WeeklySummary = weeklySummaryBox.Text;
-            
-            // Update totals
-            currentReport.UpdateTotals();
-            
-            // Save locally
-            bool success = await LocalReportStorageManager.SaveWeekReportAsync(selectedWeekStart, currentReport);
-            
-            if (success)
+            try
             {
-                statusLabel.Text = "Report saved locally";
+                // Update weekly summary
+                currentReport.WeeklySummary = weeklySummaryBox.Text;
                 
-                // Refresh calendar to show updated status
-                calendarView.RefreshCalendar();
+                // Update totals
+                currentReport.UpdateTotals();
+                
+                // Save locally
+                bool success = await LocalReportStorageManager.SaveWeekReportAsync(selectedWeekStart, currentReport);
+                
+                if (success)
+                {
+                    statusLabel.Text = "Report saved locally";
+                }
+                else
+                {
+                    statusLabel.Text = "Error saving report";
+                    MessageBox.Show("Failed to save the report locally.", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                statusLabel.Text = "Error saving report";
+                MessageBox.Show($"Error saving report: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         
         private async void SubmitButton_Click(object sender, EventArgs e)
         {
-            // Update weekly summary
-            currentReport.WeeklySummary = weeklySummaryBox.Text;
-            
-            // Update totals
-            currentReport.UpdateTotals();
-            
-            // First save locally
-            await LocalReportStorageManager.SaveWeekReportAsync(selectedWeekStart, currentReport);
-            
-            // Then submit to server
-            statusLabel.Text = "Submitting to server...";
-            bool success = await currentReport.SubmitToServerAsync(currentStudent.access_token);
-            
-            if (success)
+            try
             {
-                statusLabel.Text = "Report submitted successfully";
+                // Update weekly summary
+                currentReport.WeeklySummary = weeklySummaryBox.Text;
                 
-                // Remove local file after successful submission
-                LocalReportStorageManager.RemoveAfterSync(selectedWeekStart);
+                // Update totals
+                currentReport.UpdateTotals();
                 
-                // Update UI to show submitted status
-                UpdateUI();
+                // First save locally
+                await LocalReportStorageManager.SaveWeekReportAsync(selectedWeekStart, currentReport);
+                
+                // Then submit to server
+                statusLabel.Text = "Submitting to server...";
+                bool success = await currentReport.SubmitToServerAsync(currentStudent.access_token);
+                
+                if (success)
+                {
+                    statusLabel.Text = "Report submitted successfully";
+                    
+                    // Remove local file after successful submission
+                    LocalReportStorageManager.RemoveAfterSync(selectedWeekStart);
+                    
+                    // Update UI to show submitted status
+                    UpdateUI();
+                }
+                else
+                {
+                    statusLabel.Text = "Error submitting report";
+                    MessageBox.Show("Failed to submit the report to the server.", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                statusLabel.Text = "Error submitting report";
+                MessageBox.Show($"Error submitting report: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         

@@ -5,6 +5,7 @@ using Student_App.UI;
 using Student_App.Models;
 using Student_App.Forms;
 using System.IO;
+using System.Linq;
 
 namespace Student_App.Forms
 {
@@ -245,39 +246,41 @@ namespace Student_App.Forms
 
         private void SetupReportButton()
         {
-            // Find the Reports button in the menu buttons collection
+            // Find the Reports button if it exists
             if (menuButtons.ContainsKey("Reports"))
             {
-                menuButtons["Reports"].Click += (s, e) => 
-                {
-                    // First activate the menu item
-                    SetActiveMenuItem("Reports");
-                    
-                    // Then open the reports form
-                    OpenReportsForm();
-                };
+                var reportButton = menuButtons["Reports"];
+                
+                // We can't use reportButton.Click = null
+                // Instead, we'll just add our handler directly
+                // The existing handler in LayoutForm should still work
+                
+                // Add our new handler
+                reportButton.Click += (s, e) => OpenReportsForm();
             }
         }
 
         private void OpenReportsForm()
         {
-            // Add null check for currentStudent
-            if (currentStudent == null)
-            {
-                MessageBox.Show("Student information is not available. Please log in again.", 
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
             try
             {
+                if (currentStudent == null)
+                {
+                    MessageBox.Show("Student information is not available. Please log in again.", 
+                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Create only ONE instance of the form
                 var reportForm = new WeeklyReportForm(currentStudent);
+                
+                // Show it and hide this form
                 reportForm.Show();
                 this.Hide();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error opening Reports form: {ex.Message}\n\n{ex.StackTrace}", 
+                MessageBox.Show($"Error opening Reports form: {ex.Message}", 
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
