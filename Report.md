@@ -1,8 +1,8 @@
-# Student Weekly Reporting System
+# Student Weekly Reporting System (C# Application)
 
 ## Overview
 
-The Student Weekly Reporting System is designed to help students document their learning activities throughout their training program. The system provides a structured way to create, manage, and submit hourly, daily, and weekly reports, while enforcing date restrictions and efficiently calculating report status.
+The Student Weekly Reporting System is designed to help students document their learning activities throughout their training program. The system provides a structured way to create, manage, and submit hourly, daily, and weekly reports, while enforcing date restrictions and efficiently calculating report status. Implemented in C#, this application leverages client-side processing to minimize server load.
 
 ## Core Features
 
