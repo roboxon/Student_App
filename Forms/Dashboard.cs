@@ -40,6 +40,9 @@ namespace Student_App.Forms
             
             // Load Release data asynchronously
             LoadReleaseDataAsync();
+            
+            // Set up the report button
+            SetupReportButton();
         }
 
         private void LoadReleaseDataAsync()
@@ -238,6 +241,44 @@ namespace Student_App.Forms
                 components?.Dispose();
             }
             base.Dispose(disposing);
+        }
+
+        private void SetupReportButton()
+        {
+            // Find the Reports button in the menu buttons collection
+            if (menuButtons.ContainsKey("Reports"))
+            {
+                menuButtons["Reports"].Click += (s, e) => 
+                {
+                    // First activate the menu item
+                    SetActiveMenuItem("Reports");
+                    
+                    // Then open the reports form
+                    OpenReportsForm();
+                };
+            }
+        }
+
+        private void OpenReportsForm()
+        {
+            var reportForm = new WeeklyReportForm(currentStudent);
+            reportForm.Show();
+            this.Hide();
+        }
+
+        // Get the current student
+        private Student GetCurrentStudent()
+        {
+            // Use the existing currentStudent field
+            return currentStudent;
+        }
+
+        protected override void InitializeLayoutComponents()
+        {
+            base.InitializeLayoutComponents();
+            
+            // After base initialization, modify the Reports button click handler
+            SetupReportButton();
         }
     }
 } 
