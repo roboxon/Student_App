@@ -27,10 +27,19 @@ namespace Student_App
         protected virtual void InitializeComponent()
         {
             this.Text = "Student App";
-            this.Size = new Size(AppLayout.FormWidth, 800);
+            
+            // Replace fixed width with a more flexible size
+            // this.Size = new Size(AppLayout.FormWidth, 800);
+            this.Size = new Size(AppLayout.DefaultInitialWidth, AppLayout.DefaultInitialHeight);
+            
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = AppColors.Background;
+            
+            // Keep a reasonable minimum size
             this.MinimumSize = new Size(800, 600);
+            
+            // Adding WindowState maximized for better use of screen space
+            this.WindowState = FormWindowState.Maximized;
         }
 
         protected virtual void InitializeLayoutComponents()

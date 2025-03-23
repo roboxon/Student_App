@@ -27,13 +27,16 @@ namespace Student_App.UI
 
     public static class AppLayout
     {
-        public static readonly int FormWidth = 850;
         public static readonly int HeaderHeight = 60;
         public static readonly int FooterHeight = 30;
         public static readonly int Padding = 10;
         public static readonly int Margin = 8;
         public static readonly int BorderRadius = 5;
         public static readonly int CardElevation = 2;
-        public static readonly int ContentWidth = FormWidth - (2 * Margin);
+        public static readonly int SideMenuWidth = 200;
+        public static readonly double ContentPanelWidthPercentage = 0.75;
+        public static readonly double SidePanelWidthPercentage = 0.25;
+        public static readonly int DefaultInitialWidth = 1024;
+        public static readonly int DefaultInitialHeight = 768;
     }
 } 
