@@ -528,7 +528,7 @@ namespace Student_App.Forms
                         );
 
                         // Create and show dashboard
-                        var dashboard = new Dashboard(student, student.working_days);
+                        var dashboard = new Dashboard(student);
                         this.Hide();
                         dashboard.ShowDialog();
                         this.Close();
