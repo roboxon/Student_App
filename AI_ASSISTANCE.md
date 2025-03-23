@@ -691,28 +691,6 @@ This documentation serves as a living guide for development, and should be updat
 ### 6. Resources
 - **DAA_Logo.ico** - Application icon
 
-### 2. Configuration System
-- **Implementation**:
-  ```csharp
-  public static class AppConfig
-  {
-      public static class Environment
-      {
-          public static string Current => ConfigurationManager.AppSettings["Environment"] ?? "Development";
-          public static bool IsDevelopment => Current.Equals("Development", StringComparison.OrdinalIgnoreCase);
-          public static bool IsProduction => Current.Equals("Production", StringComparison.OrdinalIgnoreCase);
-      }
-
-      public static string TokenEndpoint => ConfigurationManager.AppSettings["TokenEndpoint"];
-      public static string ApiBaseUrl => ConfigurationManager.AppSettings["ApiBaseUrl"];
-  }
-  ```
-- **Features**:
-  - Environment-based configuration
-  - API endpoint management
-  - Service timeout settings
-  - Token management
-
 ## Current Issues and Warnings
 ✓ All null reference warnings have been fixed
 ✓ System tray implementation is stable using ApplicationContext pattern
