@@ -240,105 +240,110 @@ public static class AppFonts
 ```
 
 ### 4. System Tray Integration
-- **Implementation**: 
+- **Implementation**: Uses ApplicationContext pattern for reliable system tray functionality
   ```csharp
-  public class SystemTrayApplication : IDisposable
+  public class TrayApplicationContext : ApplicationContext
   {
-      private readonly NotifyIcon trayIcon;
-      private readonly ContextMenuStrip trayMenu;
-      private readonly Form mainForm;
-      private bool disposed;
+      private NotifyIcon trayIcon;
+      private Form currentForm;
+      private static TrayApplicationContext instance;
 
-      public SystemTrayApplication(Form form)
+      // Singleton pattern
+      public static TrayApplicationContext Instance
       {
-          mainForm = form ?? throw new ArgumentNullException(nameof(form));
+          get
+          {
+              if (instance == null)
+                  instance = new TrayApplicationContext();
+              return instance;
+          }
+      }
+
+      private TrayApplicationContext()
+      {
+          InitializeTrayIcon();
+      }
+
+      private void InitializeTrayIcon()
+      {
+          string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resource", "DAA_Logo.ico");
           
-          // Initialize tray icon
           trayIcon = new NotifyIcon
           {
-              Icon = new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resource", "DAA_Logo.ico")),
+              Icon = new Icon(iconPath),
               Text = "Student App",
               Visible = true
           };
 
-          // Create context menu
-          trayMenu = new ContextMenuStrip();
-          trayMenu.Items.Add("Show Dashboard", null, OnOpenDashboard);
-          trayMenu.Items.Add("-");
-          trayMenu.Items.Add("Exit", null, OnExit);
-
-          // Assign menu to tray icon
-          trayIcon.ContextMenuStrip = trayMenu;
-          trayIcon.DoubleClick += OnOpenDashboard;
-      }
-
-      private void OnOpenDashboard(object? sender, EventArgs e)
-      {
-          mainForm.Show();
-          mainForm.WindowState = FormWindowState.Normal;
-          mainForm.Activate();
-      }
-
-      private void OnExit(object? sender, EventArgs e)
-      {
-          trayIcon.Visible = false;
-          Application.Exit();
-      }
-
-      public void Dispose()
-      {
-          if (!disposed)
-          {
-              trayIcon.Visible = false;
-              trayIcon.Dispose();
-              trayMenu.Dispose();
-              disposed = true;
-          }
-      }
-  }
-  ```
-
-- **Integration with LayoutForm**:
-  ```csharp
-  public partial class LayoutForm : Form
-  {
-      protected SystemTrayApplication? systemTray;
-
-      protected virtual void InitializeSystemTray()
-      {
-          systemTray = new SystemTrayApplication(this);
+          var contextMenu = new ContextMenuStrip();
+          contextMenu.Items.Add("Show Application", null, ShowForm);
+          contextMenu.Items.Add("-");
+          contextMenu.Items.Add("Exit", null, Exit);
           
-          // Handle minimize to tray
-          this.Resize += (s, e) =>
-          {
-              if (WindowState == FormWindowState.Minimized)
-              {
-                  Hide();
-              }
-          };
-
-          // Handle form closing
-          this.FormClosing += (s, e) =>
-          {
-              if (e.CloseReason == CloseReason.UserClosing)
-              {
-                  e.Cancel = true;
-                  Hide();
-              }
-          };
+          trayIcon.ContextMenuStrip = contextMenu;
+          trayIcon.DoubleClick += ShowForm;
       }
 
-      protected override void Dispose(bool disposing)
+      public void SetForm(Form form)
       {
-          if (disposing)
-          {
-              systemTray?.Dispose();
-              // ... other disposal code ...
-          }
-          base.Dispose(disposing);
+          // Update the current form and manage its events
+          currentForm = form;
+          currentForm.FormClosing += Form_FormClosing;
+          currentForm.Resize += Form_Resize;
       }
   }
   ```
+
+- **Program.cs Integration**:
+  ```csharp
+  static void Main()
+  {
+      ApplicationConfiguration.Initialize();
+      
+      // Create and start the application context
+      var trayContext = TrayApplicationContext.Instance;
+      
+      // Create the login form and show it
+      var loginForm = new Login();
+      loginForm.Show();
+      
+      // Add the login form to the context
+      trayContext.SetForm(loginForm);
+      
+      // Run the application with our custom context
+      Application.Run(trayContext);
+  }
+  ```
+
+- **Form Switching**:
+  ```csharp
+  private void OpenDashboard(Student student)
+  {
+      var dashboard = new Dashboard(student);
+      dashboard.Show();
+      
+      // Update the application context with the new form
+      TrayApplicationContext.Instance.SetForm(dashboard);
+      
+      this.Hide();
+  }
+  ```
+
+- **Features**:
+  - Persistent system tray icon regardless of form state
+  - Context menu with Show and Exit options
+  - Double-click to show current form
+  - Minimize to tray functionality
+  - Proper resource cleanup on application exit
+  - Seamless form switching
+
+- **Benefits**:
+  - Reliable background operation for attendance monitoring
+  - Application remains accessible even when minimized
+  - Centralized icon management
+  - Consistent behavior across all forms
+  - Proper application lifecycle management
+  - Low memory footprint when running in background
 
 ### 5. Base Layout Implementation
 - **Location**: LayoutForm.cs
@@ -391,6 +396,9 @@ public static class AppFonts
    - ✓ Responsive layout
    - ✓ Professional color scheme
    - ✓ Consistent typography
+   - ✓ System tray integration with ApplicationContext pattern
+   - ✓ Persistent background operation
+   - ✓ Reliable minimize to tray functionality
 
 3. **API Integration**
    - ✓ Authentication endpoints
@@ -656,13 +664,13 @@ This documentation serves as a living guide for development, and should be updat
   - Key NuGet Packages:
     - Newtonsoft.Json
     - System.Configuration.ConfigurationManager
+- **TrayApplicationContext.cs** - Application context for system tray management
 
 ### 2. Forms
 - **Login.cs** - Main authentication form
-- **Dashboard.cs** - Main application interface with system tray support
-- **SystemTrayApplication.cs** - System tray integration with IDisposable
+- **Dashboard.cs** - Main application interface
 - **ApiResponseViewer.cs** - API response debugging tool
-- **LayoutForm.cs** - Base layout template with system tray initialization
+- **LayoutForm.cs** - Base layout template
 
 ### 3. Models
 - **Student.cs** - Core student data model
@@ -707,14 +715,32 @@ This documentation serves as a living guide for development, and should be updat
 
 ## Current Issues and Warnings
 ✓ All null reference warnings have been fixed
-✓ System tray implementation is stable
+✓ System tray implementation is stable using ApplicationContext pattern
 ✓ Proper resource cleanup is implemented
-✓ Icon display is working correctly
+✓ Icon display is working correctly and persists on minimize
 
 Recent improvements:
-1. Added SystemTrayApplication.Dispose() method for proper cleanup
-2. Implemented proper form minimizing behavior
-3. Added robust error handling for tray icon
-4. Fixed event handler null safety with nullable parameter types
-5. Integrated system tray at LayoutForm level for all forms
-6. Added proper application exit handling 
+1. Implemented TrayApplicationContext for reliable system tray management
+2. Used singleton pattern to ensure single tray icon instance
+3. Created proper form switching mechanism with event management
+4. Fixed tray icon persistence issues
+5. Implemented application context pattern for improved lifecycle management
+6. Added proper application exit handling
+
+## Project Structure
+
+### 1. Core Files
+- **Student_App.csproj**
+  - Target Framework: net8.0-windows
+  - Application Icon: Resource/DAA_Logo.ico
+  - Content Include for icon with CopyToOutputDirectory setting
+  - Key NuGet Packages:
+    - Newtonsoft.Json
+    - System.Configuration.ConfigurationManager
+- **TrayApplicationContext.cs** - Application context for system tray management
+
+### 2. Forms
+- **Login.cs** - Main authentication form
+- **Dashboard.cs** - Main application interface
+- **ApiResponseViewer.cs** - API response debugging tool
+- **LayoutForm.cs** - Base layout template 
