@@ -150,6 +150,18 @@ namespace Student_App.Forms
             descriptionLabel.Text = currentRelease.content.program?.program_description ?? 
                 "Your learning journey and course materials";
             
+            // Create a FlowLayoutPanel to properly arrange the subjects vertically
+            var subjectsContainer = new FlowLayoutPanel
+            {
+                Width = contentPanel.Width - 40,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                Dock = DockStyle.Top,
+                Margin = new Padding(20, 10, 20, 10)
+            };
+            
             // Add subjects
             if (currentRelease.content.subjects != null)
             {
@@ -159,7 +171,6 @@ namespace Student_App.Forms
                     .OrderBy(s => s.subject.subject_tag ?? s.subject.subject_name)
                     .ToList();
                 
-                int yPos = 0;
                 foreach (var subjectItem in sortedSubjects)
                 {
                     if (subjectItem.subject == null)
@@ -168,13 +179,11 @@ namespace Student_App.Forms
                     // Create a simple subject card with topics
                     var subjectCard = CurriculumViewRenderer.CreateSubjectCard(
                         subjectItem, 
-                        contentPanel.Width - 40
+                        subjectsContainer.Width - 20,
+                        HandleCardToggle
                     );
                     
-                    subjectCard.Location = new Point(0, yPos);
-                    contentPanel.Controls.Add(subjectCard);
-                    
-                    yPos += subjectCard.Height + 20;
+                    subjectsContainer.Controls.Add(subjectCard);
                 }
                 
                 // No subjects message
@@ -186,10 +195,13 @@ namespace Student_App.Forms
                         Font = new Font(AppFonts.Body.FontFamily, 14, FontStyle.Regular),
                         ForeColor = Color.Gray,
                         AutoSize = true,
-                        Location = new Point(20, 20)
+                        Margin = new Padding(20)
                     };
-                    contentPanel.Controls.Add(emptyLabel);
+                    subjectsContainer.Controls.Add(emptyLabel);
                 }
+                
+                // Add the container to the content panel
+                contentPanel.Controls.Add(subjectsContainer);
             }
         }
         
@@ -206,6 +218,24 @@ namespace Student_App.Forms
                     {
                         panel.Width = contentPanel.Width - 40;
                     }
+                }
+            }
+        }
+        
+        private void HandleCardToggle(object sender, EventArgs e)
+        {
+            // Just force the parent container to recalculate its layout
+            if (sender is Control control && control.Parent != null)
+            {
+                var parent = control.Parent;
+                while (parent != null && !(parent is FlowLayoutPanel))
+                {
+                    parent = parent.Parent;
+                }
+                
+                if (parent is FlowLayoutPanel flowPanel)
+                {
+                    flowPanel.PerformLayout();
                 }
             }
         }

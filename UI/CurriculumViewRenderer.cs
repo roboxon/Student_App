@@ -16,6 +16,7 @@ namespace Student_App.UI
         private static readonly Color TopicBorder = Color.FromArgb(240, 240, 250);
         private static readonly Color SubjectAccent = Color.FromArgb(13, 110, 253);  // Blue accent
         private static readonly Color TopicAccent = Color.FromArgb(102, 16, 242);    // Purple accent
+        private static readonly Color ExpandButtonBg = Color.FromArgb(240, 240, 250); // Button background
         
         // Helper method to create rounded rectangle path
         private static GraphicsPath CreateRoundedRectangle(Rectangle bounds, int radius)
@@ -70,22 +71,36 @@ namespace Student_App.UI
             parent.Controls.Add(descriptionLabel);
         }
         
-        // Creates a subject card with topics - now with improved styling
-        public static Panel CreateSubjectCard(dynamic subjectItem, int width)
+        // Simpler accordion-style subject card with expand/collapse
+        public static Panel CreateSubjectCard(dynamic subjectItem, int width, EventHandler onToggle = null)
         {
             if (subjectItem == null || subjectItem.subject == null)
                 return new Panel();
                 
             dynamic subject = subjectItem.subject;
             
-            // Main card
+            // Main container panel
+            var containerPanel = new Panel
+            {
+                Width = width,
+                AutoSize = true,
+                MinimumSize = new Size(width, 60),
+                Margin = new Padding(5, 10, 5, 10),
+                Padding = new Padding(0),
+                BackColor = Color.Transparent,
+                Tag = false // false = collapsed, true = expanded
+            };
+            
+            // Main card panel (will show shadow and rounded corners)
             var card = new Panel
             {
                 Width = width,
+                AutoSize = true,
+                MinimumSize = new Size(width, 60),
+                Dock = DockStyle.Fill,
                 BackColor = CardBackground,
-                Margin = new Padding(10, 5, 10, 15),
                 Padding = new Padding(0),
-                BorderStyle = BorderStyle.None // Remove border, we'll draw it with rounded corners
+                BorderStyle = BorderStyle.None
             };
             
             // Draw rounded rectangle with shadow
@@ -121,9 +136,11 @@ namespace Student_App.UI
             // Header
             var header = new Panel
             {
-                Dock = DockStyle.Top,
+                Width = width,
                 Height = 60,
-                BackColor = Color.Transparent // Make transparent to show the rounded corners
+                Dock = DockStyle.Top,
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand
             };
             
             // Header background with rounded top corners
@@ -174,7 +191,8 @@ namespace Student_App.UI
                 ForeColor = AppColors.Text,
                 AutoSize = true,
                 Location = new Point(15, 15),
-                BackColor = Color.Transparent
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand
             };
             
             // Subject hours - with null checks
@@ -190,18 +208,57 @@ namespace Student_App.UI
                 ForeColor = AppColors.Secondary,
                 AutoSize = true,
                 Location = new Point(15, 35),
-                BackColor = Color.Transparent
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand
+            };
+            
+            // Create expand/collapse button
+            var expandButton = new PictureBox
+            {
+                Size = new Size(24, 24),
+                Location = new Point(width - 40, 18),
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand
+            };
+            
+            expandButton.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                
+                // Draw circle background
+                using (var bgBrush = new SolidBrush(ExpandButtonBg))
+                {
+                    e.Graphics.FillEllipse(bgBrush, 0, 0, 24, 24);
+                }
+                
+                // Draw plus/minus symbol
+                using (var pen = new Pen(SubjectAccent, 2))
+                {
+                    // Horizontal line
+                    e.Graphics.DrawLine(pen, 8, 12, 16, 12);
+                    
+                    // Vertical line (only when collapsed)
+                    if (!(bool)containerPanel.Tag)
+                    {
+                        e.Graphics.DrawLine(pen, 12, 8, 12, 16);
+                    }
+                }
             };
             
             header.Controls.Add(titleLabel);
             header.Controls.Add(hoursLabel);
+            header.Controls.Add(expandButton);
             
-            // Add topics list panel
-            var topicsPanel = new Panel
+            // Topics container with proper layout
+            var topicsContainer = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(10, 10, 10, 10),
-                AutoScroll = true,
+                Width = width,
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                Dock = DockStyle.Top,
+                Padding = new Padding(10),
+                Visible = false, // Start collapsed
                 BackColor = Color.Transparent
             };
             
@@ -209,8 +266,6 @@ namespace Student_App.UI
             try {
                 if (subjectItem.topics != null && subjectItem.topics.Count > 0)
                 {
-                    int yPos = 10;
-                    
                     foreach (var topicItem in subjectItem.topics)
                     {
                         if (topicItem == null || topicItem.topic == null)
@@ -222,7 +277,7 @@ namespace Student_App.UI
                         {
                             Width = width - 40,
                             Height = 60,
-                            Location = new Point(10, yPos),
+                            Margin = new Padding(5, 5, 5, 5),
                             BackColor = Color.White,
                             BorderStyle = BorderStyle.None
                         };
@@ -323,13 +378,8 @@ namespace Student_App.UI
                             }
                         } catch {}
                         
-                        topicsPanel.Controls.Add(topicPanel);
-                        
-                        yPos += 70; // Space for next topic
+                        topicsContainer.Controls.Add(topicPanel);
                     }
-                    
-                    // Set card height based on topics
-                    card.Height = Math.Min(500, header.Height + yPos + 20);
                 }
                 else
                 {
@@ -340,13 +390,10 @@ namespace Student_App.UI
                         Font = new Font(AppFonts.Body.FontFamily, 11, FontStyle.Italic),
                         ForeColor = Color.Gray,
                         AutoSize = true,
-                        Location = new Point(20, 20),
+                        Margin = new Padding(20),
                         BackColor = Color.Transparent
                     };
-                    topicsPanel.Controls.Add(emptyLabel);
-                    
-                    // Set a fixed height for the card
-                    card.Height = 150;
+                    topicsContainer.Controls.Add(emptyLabel);
                 }
             } catch {
                 // Error handling for topics
@@ -356,17 +403,38 @@ namespace Student_App.UI
                     Font = new Font(AppFonts.Body.FontFamily, 11, FontStyle.Italic),
                     ForeColor = Color.Gray,
                     AutoSize = true,
-                    Location = new Point(20, 20),
+                    Margin = new Padding(20),
                     BackColor = Color.Transparent
                 };
-                topicsPanel.Controls.Add(errorLabel);
-                card.Height = 150;
+                topicsContainer.Controls.Add(errorLabel);
             }
             
-            card.Controls.Add(topicsPanel);
-            card.Controls.Add(header);
+            // Toggle handler for expand/collapse
+            void ToggleTopics()
+            {
+                bool isExpanded = !(bool)containerPanel.Tag;
+                containerPanel.Tag = isExpanded;
+                
+                // Update UI
+                topicsContainer.Visible = isExpanded;
+                expandButton.Invalidate(); // Redraw plus/minus button
+                
+                // Notify parent of the change
+                onToggle?.Invoke(containerPanel, EventArgs.Empty);
+            }
             
-            return card;
+            // Set up click handlers
+            header.Click += (s, e) => ToggleTopics();
+            titleLabel.Click += (s, e) => ToggleTopics();
+            hoursLabel.Click += (s, e) => ToggleTopics();
+            expandButton.Click += (s, e) => ToggleTopics();
+            
+            // Add everything to the container
+            card.Controls.Add(topicsContainer);
+            card.Controls.Add(header);
+            containerPanel.Controls.Add(card);
+            
+            return containerPanel;
         }
         
         // Create a nicer loading panel with a smooth spinner
