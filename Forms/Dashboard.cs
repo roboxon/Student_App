@@ -14,7 +14,6 @@ namespace Student_App.Forms
         private Panel schedulePanel = new();
         private Student? currentStudent;
         private List<WorkingDay>? workingDays;
-        private new readonly SystemTrayApplication systemTray;
         private System.ComponentModel.IContainer components = null;
 
         public Dashboard(Student student)
@@ -27,38 +26,24 @@ namespace Student_App.Forms
                 this.Close();
                 return;
             }
+            
             currentStudent = student;
             workingDays = null;
             InitializeComponent();
             this.Icon = new Icon(Path.Combine(Application.StartupPath, "Resource", "DAA_Logo.ico"));
             InitializeDashboardControls();
             SetActiveMenuItem("Dashboard");
-            systemTray = new SystemTrayApplication(this);
-
-            // Handle minimize to tray
-            this.Resize += (s, e) =>
-            {
-                if (WindowState == FormWindowState.Minimized)
-                {
-                    Hide();
-                }
-            };
-
-            // Handle form closing
-            this.FormClosing += (s, e) =>
-            {
-                if (e.CloseReason == CloseReason.UserClosing)
-                {
-                    e.Cancel = true;
-                    Hide();
-                }
-            };
         }
 
         protected override void InitializeComponent()
         {
             base.InitializeComponent();
             this.Text = "Student Dashboard";
+            
+            // Force the form to stay active in memory
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.ShowInTaskbar = false;  // Hide from taskbar but keep running
+            
             if (currentStudent != null)
             {
                 UpdateUserInfo($"{currentStudent.first_name} {currentStudent.last_name}");
@@ -239,7 +224,7 @@ namespace Student_App.Forms
         {
             if (disposing)
             {
-                systemTray?.Dispose();
+                // Remove system tray disposal
                 components?.Dispose();
             }
             base.Dispose(disposing);

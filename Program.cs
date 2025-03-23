@@ -6,6 +6,9 @@ namespace Student_App
 {
     internal static class Program
     {
+        // Keep a static reference to prevent garbage collection
+        private static SystemTrayApplication? _systemTray;
+        
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>
@@ -20,25 +23,29 @@ namespace Student_App
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Handle application exit
-            Application.ApplicationExit += (s, e) =>
+            // Set up exception handling
+            Application.ThreadException += (s, e) => 
+                MessageBox.Show($"Unexpected error: {e.Exception.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            
+            AppDomain.CurrentDomain.UnhandledException += (s, e) => 
+                MessageBox.Show($"Fatal error: {e.ExceptionObject}", "Fatal Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+            // Ensure tray icon cleanup on exit
+            Application.ApplicationExit += (s, e) => 
             {
-                // Ensure cleanup of any remaining system tray icons
-                foreach (var process in System.Diagnostics.Process.GetProcessesByName("Student_App"))
-                {
-                    try
-                    {
-                        if (process.Id != System.Diagnostics.Process.GetCurrentProcess().Id)
-                        {
-                            process.Kill();
-                        }
-                    }
-                    catch { }
-                }
+                _systemTray?.Dispose();
             };
 
             // Start with the login form
             Application.Run(new Login());
+        }
+
+        // Add this method to keep the tray reference alive
+        public static void SetSystemTray(SystemTrayApplication tray)
+        {
+            _systemTray = tray;
         }
     }
 }

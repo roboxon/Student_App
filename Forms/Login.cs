@@ -15,6 +15,7 @@ using Student_App.Models;
 using Student_App.UI;
 using System.Drawing;
 using System.IO;
+using Student_App.Forms;
 
 namespace Student_App.Forms
 {
@@ -514,10 +515,7 @@ namespace Student_App.Forms
                 var student = await Student.LoginAsync(EmailTextBox!.Text, PasswordTextBox!.Text);
 
                 // Create and show dashboard
-                var dashboard = new Dashboard(student);
-                this.Hide();
-                dashboard.ShowDialog();
-                this.Close();
+                OpenDashboard(student);
             }
             catch (ApiException ex)
             {
@@ -536,6 +534,17 @@ namespace Student_App.Forms
                     LoginButton.Text = "Login";
                 }
             }
+        }
+
+        private void OpenDashboard(Student student)
+        {
+            var dashboard = new Dashboard(student);
+            dashboard.Show();
+            
+            // Update the application context with the new form
+            TrayApplicationContext.Instance.SetForm(dashboard);
+            
+            this.Hide();
         }
     }
 } 
