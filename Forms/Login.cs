@@ -546,5 +546,11 @@ namespace Student_App.Forms
             
             this.Hide();
         }
+
+        private void btnExit_Click(object sender, EventArgs e)
+        {
+            // Close the application
+            Application.Exit();
+        }
     }
 } 

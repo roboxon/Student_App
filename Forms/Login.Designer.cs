@@ -9,6 +9,7 @@ namespace Student_App.Forms
 
         // Add this field declaration to the Login class (outside of any methods)
         private System.Windows.Forms.PictureBox logoPictureBox;
+        private System.Windows.Forms.Button btnExit;
 
         /// <summary>
         /// Clean up any resources being used.
@@ -55,6 +56,28 @@ namespace Student_App.Forms
             Controls.Add(logoPictureBox);
             Name = "Login";
             Text = "Login";
+            // Create a stylish X button
+            btnExit = new System.Windows.Forms.Button();
+            
+            // Configure the Exit button as an X icon
+            btnExit.FlatAppearance.BorderSize = 0;
+            btnExit.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnExit.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            btnExit.ForeColor = System.Drawing.Color.FromArgb(0, 126, 249); // Blue color to match your theme
+            btnExit.Text = "✕"; // X symbol
+            btnExit.Location = new System.Drawing.Point(this.ClientSize.Width - 40, 5); // Top-right corner
+            btnExit.Name = "btnExit";
+            btnExit.Size = new System.Drawing.Size(35, 35);
+            btnExit.TabIndex = 15; // Adjust as needed
+            btnExit.UseVisualStyleBackColor = true;
+            btnExit.Cursor = System.Windows.Forms.Cursors.Hand;
+            
+            // Add the button click event handler
+            btnExit.Click += new System.EventHandler(this.btnExit_Click);
+            
+            // Add the button to the form's controls
+            this.Controls.Add(btnExit);
+            this.btnExit.BringToFront(); // Make sure it's on top
             ((System.ComponentModel.ISupportInitialize)logoPictureBox).EndInit();
             ResumeLayout(false);
         }
