@@ -30,7 +30,7 @@ namespace Student_App.Forms
             trayIcon.DoubleClick += OnOpenDashboard;
         }
 
-        private void OnOpenDashboard(object sender, EventArgs e)
+        private void OnOpenDashboard(object? sender, EventArgs e)
         {
             if (mainForm != null)
             {
@@ -40,7 +40,7 @@ namespace Student_App.Forms
             }
         }
 
-        private void OnExit(object sender, EventArgs e)
+        private void OnExit(object? sender, EventArgs e)
         {
             trayIcon.Visible = false;
             Application.Exit();

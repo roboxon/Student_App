@@ -14,7 +14,7 @@ namespace Student_App.Forms
         private Panel schedulePanel = new();
         private Student? currentStudent;
         private List<WorkingDay>? workingDays;
-        private SystemTrayApplication? systemTray;
+        private readonly SystemTrayApplication systemTray;
         private System.ComponentModel.IContainer components = null;
 
         public Dashboard(Student student)
@@ -36,23 +36,21 @@ namespace Student_App.Forms
             systemTray = new SystemTrayApplication(this);
 
             // Handle minimize to tray
+            this.Resize += (s, e) =>
+            {
+                if (WindowState == FormWindowState.Minimized)
+                {
+                    Hide();
+                }
+            };
+
+            // Handle form closing
             this.FormClosing += (s, e) =>
             {
                 if (e.CloseReason == CloseReason.UserClosing)
                 {
                     e.Cancel = true;
-                    this.Hide();
-                }
-            };
-
-            // Handle minimize button
-            this.MinimizeBox = true;
-            this.MinimizeBox = true;
-            this.SizeChanged += (s, e) =>
-            {
-                if (this.WindowState == FormWindowState.Minimized)
-                {
-                    this.Hide();
+                    Hide();
                 }
             };
         }
