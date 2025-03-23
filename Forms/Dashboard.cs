@@ -211,15 +211,16 @@ namespace Student_App.Forms
                 }
             };
             
-            // Working Schedule Panel - now has maximum space
-            schedulePanel = new Panel
+            // Working Schedule Panel - redesigned as compact rows
+            var schedulePanel = new Panel
             {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(10),
-                BorderStyle = BorderStyle.None
+                Dock = DockStyle.Top,
+                Height = 100, // Reduced height for compact display
+                Padding = new Padding(10, 5, 10, 5),
+                BorderStyle = BorderStyle.None,
+                Margin = new Padding(0, 10, 0, 0)
             };
             
-            // Modify the existing schedule code to add proper title and styling
             var scheduleTitle = new Label
             {
                 Text = "Working Schedule",
@@ -228,41 +229,122 @@ namespace Student_App.Forms
                 AutoSize = true,
                 Location = new Point(5, 5)
             };
+            schedulePanel.Controls.Add(scheduleTitle);
             
-            // Schedule list view with better styling
-            var scheduleList = new ListView
+            // Create a flow panel for the days
+            var daysPanel = new FlowLayoutPanel
             {
-                View = View.Details,
-                FullRowSelect = true,
-                GridLines = true,
-                Location = new Point(5, 30),
-                Size = new Size(mainContentPanel.Width - 30, mainContentPanel.Height - 120), // Adjust height to fill available space
-                Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Regular),
-                BorderStyle = BorderStyle.FixedSingle
+                Width = mainContentPanel.Width - 30,
+                Height = 70,
+                Location = new Point(5, 25),
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                AutoScroll = true,
+                BorderStyle = BorderStyle.None
             };
             
-            scheduleList.Columns.Add("Day", 150);
-            scheduleList.Columns.Add("Start Time", 150);
-            scheduleList.Columns.Add("End Time", 150);
-            
-            if (currentStudent?.working_days != null)
+            // Add each working day as a compact card
+            if (currentStudent?.working_days != null && currentStudent.working_days.Any())
             {
-                var scheduleItems = currentStudent.working_days.Select(day => 
-                    new ListViewItem(new[] { 
-                        day.day_name ?? "N/A",
-                        day.start_time ?? "N/A",
+                foreach (var day in currentStudent.working_days)
+                {
+                    var dayCard = CreateWorkingDayCard(
+                        day.day_name ?? "N/A", 
+                        day.start_time ?? "N/A", 
                         day.end_time ?? "N/A"
-                    })
-                ).ToArray();
-                scheduleList.Items.AddRange(scheduleItems);
+                    );
+                    daysPanel.Controls.Add(dayCard);
+                }
+            }
+            else
+            {
+                // If no working days, show a message
+                var noScheduleLabel = new Label
+                {
+                    Text = "No working days scheduled",
+                    Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Italic),
+                    ForeColor = AppColors.Secondary,
+                    AutoSize = true,
+                    Location = new Point(10, 10)
+                };
+                daysPanel.Controls.Add(noScheduleLabel);
             }
             
-            schedulePanel.Controls.Add(scheduleTitle);
-            schedulePanel.Controls.Add(scheduleList);
+            schedulePanel.Controls.Add(daysPanel);
+            
+            // Add a subtle bottom border to the schedule panel
+            schedulePanel.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(230, 230, 230), 1))
+                {
+                    e.Graphics.DrawLine(pen, 0, schedulePanel.Height - 1, schedulePanel.Width, schedulePanel.Height - 1);
+                }
+            };
+            
+            // Create a content panel for any future content
+            var contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(10),
+                BorderStyle = BorderStyle.None
+            };
             
             // Add panels to main content in new order
+            mainContentPanel.Controls.Add(contentPanel);
             mainContentPanel.Controls.Add(schedulePanel);
             mainContentPanel.Controls.Add(studentInfoPanel);
+        }
+
+        // Helper method to create a working day card
+        private Panel CreateWorkingDayCard(string dayName, string startTime, string endTime)
+        {
+            var card = new Panel
+            {
+                Width = 135,
+                Height = 60,
+                Margin = new Padding(5),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.None
+            };
+            
+            // Add a subtle border and light background
+            card.Paint += (s, e) =>
+            {
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                using (var bgBrush = new SolidBrush(Color.FromArgb(250, 250, 252)))
+                {
+                    e.Graphics.FillRectangle(bgBrush, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(230, 230, 230), 1))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
+            
+            // Day name in a prominent position
+            var dayLabel = new Label
+            {
+                Text = dayName,
+                Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Bold),
+                ForeColor = AppColors.Primary,
+                AutoSize = true,
+                Location = new Point(8, 8)
+            };
+            
+            // Time information in a compact format
+            var timeLabel = new Label
+            {
+                Text = $"{startTime} - {endTime}",
+                Font = new Font(AppFonts.Body.FontFamily, 9, FontStyle.Regular),
+                ForeColor = AppColors.Text,
+                AutoSize = true,
+                Location = new Point(8, 30)
+            };
+            
+            card.Controls.Add(dayLabel);
+            card.Controls.Add(timeLabel);
+            
+            return card;
         }
 
         protected override void Dispose(bool disposing)
