@@ -239,6 +239,88 @@ public static class AppFonts
 }
 ```
 
+### 4. System Tray Integration
+- **Implementation**: 
+  ```csharp
+  public class SystemTrayApplication
+  {
+      private NotifyIcon trayIcon;
+      private Form mainForm;
+
+      public SystemTrayApplication(Form form)
+      {
+          mainForm = form;
+          InitializeTrayIcon();
+      }
+
+      private void InitializeTrayIcon()
+      {
+          trayIcon = new NotifyIcon
+          {
+              Icon = new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resource", "DAA_Logo.ico")),
+              Visible = true
+          };
+      }
+  }
+  ```
+- **Features**:
+  - System tray icon with application logo
+  - Context menu with Show/Exit options
+  - Double-click to show main form
+  - Minimize to tray functionality
+  - Proper resource cleanup
+  - Error handling for icon loading
+
+- **Integration with Dashboard**:
+  ```csharp
+  public partial class Dashboard : Form
+  {
+      private readonly SystemTrayApplication systemTray;
+
+      public Dashboard(Student student)
+      {
+          InitializeComponent();
+          systemTray = new SystemTrayApplication(this);
+
+          // Minimize to tray
+          this.FormClosing += (s, e) =>
+          {
+              if (e.CloseReason == CloseReason.UserClosing)
+              {
+                  e.Cancel = true;
+                  this.Hide();
+              }
+          };
+      }
+  }
+  ```
+
+- **Benefits**:
+  - Keeps application running in background
+  - Easy access to main functionality
+  - Professional system integration
+  - Clean resource management
+  - User-friendly interaction
+
+### 5. Base Layout Implementation
+- **Location**: LayoutForm.cs
+- **Features**:
+  - Header panel with title and user info
+  - Side menu with navigation buttons
+  - Content wrapper for main content
+  - Footer with version and status
+  - Responsive design
+  - Rounded corners and shadows
+  - Professional color scheme
+
+### 6. Project Configuration
+- **Target Framework**: .NET 8.0 Windows
+- **Application Icon**: Resource/DAA_Logo.ico
+- **Dependencies**:
+  - Newtonsoft.Json
+  - System.Configuration.ConfigurationManager
+- **Configuration**: App.config with service endpoints and settings
+
 ## Implementation Status
 
 ### Completed Components
