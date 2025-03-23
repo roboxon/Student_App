@@ -25,6 +25,7 @@ This is a Windows Forms application designed for student activities management, 
 - **Student.cs** - Core student data model
 - **LoginResponse.cs** - API authentication response
 - **WorkingDay.cs** - Schedule data model
+- **Release.cs** - Curriculum release data model with local caching
 
 ### 4. Configuration
 - **App.config** - Application settings
@@ -62,9 +63,10 @@ This is a Windows Forms application designed for student activities management, 
    - ✓ Sleek side menu with hover effects
    - ✓ Clean content area with rounded corners
    - ✓ Status footer with version info
-   - ✓ Stats cards with key metrics
-   - ✓ Student Information panel
-   - ✓ Working Schedule panel
+   - ✓ Stats cards showing in header bar
+   - ✓ Compact student information panel
+   - ✓ Curriculum display with TreeView
+   - ✓ Resource link integration
    - ✓ Responsive layout
    - ✓ Professional color scheme
    - ✓ Consistent typography
@@ -74,7 +76,9 @@ This is a Windows Forms application designed for student activities management, 
 
 3. **API Integration**
    - ✓ Authentication endpoints
+   - ✓ Release curriculum endpoints
    - ✓ Model-centric API communication
+   - ✓ Local data caching
    - ✓ Error handling
    - ✓ Response validation
    - ✓ JSON parsing and deserialization
@@ -84,6 +88,8 @@ This is a Windows Forms application designed for student activities management, 
 ✓ System tray implementation is stable using ApplicationContext pattern
 ✓ Proper resource cleanup is implemented
 ✓ Icon display is working correctly and persists on minimize
+✓ Release curriculum data loading and display
+✓ Local caching of API responses
 
 Recent improvements:
 1. Implemented TrayApplicationContext for reliable system tray management
@@ -92,6 +98,9 @@ Recent improvements:
 4. Fixed tray icon persistence issues
 5. Implemented application context pattern for improved lifecycle management
 6. Added proper application exit handling
+7. Added Release API integration with hierarchical display
+8. Implemented local caching for improved performance
+9. Added resource links for curriculum materials
 
 ### Pending Features
 1. **Reports Module**
@@ -696,3 +705,103 @@ Future development should focus on:
 6. Improving user experience
 
 This documentation serves as a living guide for development, and should be updated as new features are added or architectural decisions are made. 
+
+### 7. Curriculum API Integration
+- **Implementation**: Release model handles its own API communication and caching
+  ```csharp
+  public class Release
+  {
+      private static readonly HttpClient _client = new HttpClient();
+      private static readonly string API_BASE_URL = "https://learnpath.elexbo.de";
+      
+      // Properties
+      public int id { get; set; }
+      public int program_id { get; set; }
+      // ... other properties ...
+      public ReleaseContent? content { get; set; }
+      
+      // Local caching methods
+      private static string GetLocalStoragePath(int releaseId)
+      {
+          // Implementation to generate local file path
+      }
+      
+      public static bool IsLocalReleaseValid(int releaseId)
+      {
+          // Implementation to check if cached data is valid
+      }
+      
+      private static void SaveReleaseToLocal(ReleaseApiResponse response, int releaseId)
+      {
+          // Implementation to save API response locally
+      }
+      
+      private static Release? LoadReleaseFromLocal(int releaseId)
+      {
+          // Implementation to load cached data
+      }
+      
+      // Static factory method for fetching release data
+      public static async Task<Release> GetReleaseAsync(Student student, bool forceRefresh = false)
+      {
+          // Implementation to get from cache or API as needed
+      }
+  }
+  ```
+  
+- **Data Structure**:
+  - Hierarchical organization:
+    - Release contains ReleaseContent
+    - ReleaseContent contains Program and Subjects
+    - Subjects contain Topics
+    - Topics contain Lessons and Resources
+  - Clean model separation with proper relationships
+  - Strong typing for all curriculum elements
+
+- **Dashboard Integration**:
+  ```csharp
+  private async void LoadReleaseDataAsync()
+  {
+      try
+      {
+          // Show loading indicator
+          ShowLoadingIndicator("Loading curriculum data...");
+          
+          // Load release data
+          currentRelease = await Release.GetReleaseAsync(currentStudent);
+          
+          // Hide loading indicator
+          HideLoadingIndicator();
+          
+          // Update the curriculum panel with the loaded data
+          UpdateCurriculumPanel();
+      }
+      catch (Exception ex)
+      {
+          HideLoadingIndicator();
+          MessageBox.Show($"Failed to load curriculum data: {ex.Message}", "Error", 
+              MessageBoxButtons.OK, MessageBoxIcon.Error);
+      }
+  }
+  ```
+
+- **UI Presentation**:
+  - TreeView for hierarchical display of curriculum
+  - Tooltips for detailed descriptions
+  - Resource links with double-click to open
+  - Hours displayed for subjects, topics, and lessons
+  - Loading indicators during data retrieval
+
+- **Features**:
+  - Automatic loading of curriculum on dashboard open
+  - Smart caching to minimize API calls
+  - Hierarchical display of all learning content
+  - Access to learning resources
+  - Program and subject descriptions
+
+- **Benefits**:
+  - Provides students with a complete view of their learning path
+  - Improves performance through local caching
+  - Maintains application responsiveness with async loading
+  - Provides quick access to learning resources
+  - Follows established model-centric pattern 
