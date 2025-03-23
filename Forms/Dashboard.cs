@@ -40,125 +40,214 @@ namespace Student_App.Forms
             base.InitializeComponent();
             this.Text = "Student Dashboard";
             
-            // Force the form to stay active in memory
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.ShowInTaskbar = false;  // Hide from taskbar but keep running
+            // Modify the header panel
+            headerPanel.Height = 60; // Reduced height
+            headerPanel.Padding = new Padding(10, 0, 10, 0); // Reduce vertical padding
             
             if (currentStudent != null)
             {
-                UpdateUserInfo($"{currentStudent.first_name} {currentStudent.last_name}");
+                // Create a single row panel for all header info
+                var headerInfoPanel = new Panel
+                {
+                    Dock = DockStyle.Fill,
+                    BackColor = Color.Transparent
+                };
+                
+                // Welcome message - now as first item
+                var welcomeLabel = new Label
+                {
+                    Text = $"Welcome, {currentStudent.first_name} {currentStudent.last_name}",
+                    Font = new Font(AppFonts.Body.FontFamily, 12, FontStyle.Regular),
+                    ForeColor = Color.White,
+                    AutoSize = true,
+                    Location = new Point(5, 20) // Centered vertically
+                };
+                headerInfoPanel.Controls.Add(welcomeLabel);
+                
+                // Stats items with smaller font
+                var statsItems = new[]
+                {
+                    new { Label = "Course", Value = currentStudent.plan_name ?? "N/A" },
+                    new { Label = "Group", Value = currentStudent.group_name ?? "N/A" },
+                    new { Label = "Grade", Value = currentStudent.grade_score?.ToString("F1") ?? "N/A" },
+                    new { Label = "Status", Value = currentStudent.is_active == 1 ? "Active" : "Inactive" }
+                };
+                
+                // Calculate positions - starting after welcome message
+                int startX = welcomeLabel.Width + 80; // Start after welcome with some padding
+                int itemWidth = 140; // Reduced width for each item
+                
+                foreach (var item in statsItems)
+                {
+                    var statPanel = new Panel
+                    {
+                        Width = itemWidth,
+                        Height = 40,
+                        Location = new Point(startX, 10), // Centered in header
+                        BackColor = Color.Transparent
+                    };
+                    
+                    var labelControl = new Label
+                    {
+                        Text = item.Label,
+                        Font = new Font(AppFonts.Body.FontFamily, 9, FontStyle.Regular),
+                        ForeColor = Color.LightGray,
+                        AutoSize = true,
+                        Location = new Point(0, 0)
+                    };
+                    
+                    var valueControl = new Label
+                    {
+                        Text = item.Value,
+                        Font = new Font(AppFonts.Body.FontFamily, 11, FontStyle.Bold),
+                        ForeColor = Color.White,
+                        AutoSize = true,
+                        Location = new Point(0, 18)
+                    };
+                    
+                    statPanel.Controls.Add(labelControl);
+                    statPanel.Controls.Add(valueControl);
+                    headerInfoPanel.Controls.Add(statPanel);
+                    
+                    startX += itemWidth;
+                }
+                
+                // Clear existing controls and add the new panel
+                headerPanel.Controls.Clear();
+                headerPanel.Controls.Add(headerInfoPanel);
             }
         }
 
         private void InitializeDashboardControls()
         {
-            // Stats Panel
-            statsPanel = new Panel
+            // Student Information panel with proper formatting
+            var studentInfoPanel = new Panel
             {
-                Height = 100,
+                Height = 70, // Further reduced height
                 Dock = DockStyle.Top,
-                Padding = new Padding(10)
+                Padding = new Padding(10, 5, 10, 5),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.None
             };
-
-            var statsCards = new[] {
-                ("Course", currentStudent?.plan_name ?? "N/A"),
-                ("Group", currentStudent?.group_name ?? "N/A"),
-                ("Grade", currentStudent?.grade_score?.ToString("F1") ?? "N/A"),
-                ("Status", currentStudent?.is_active == 1 ? "Active" : "Inactive")
-            };
-
-            int cardWidth = (mainContentPanel.Width - 60) / 4;
-            int xPos = 0;
-
-            foreach (var (title, value) in statsCards)
-            {
-                var card = CreateStatsCard(title, value, cardWidth);
-                card.Location = new Point(xPos, 0);
-                statsPanel.Controls.Add(card);
-                xPos += cardWidth + 20;
-            }
-
-            // Activity Panel
-            activityPanel = new Panel
-            {
-                Height = 300,
-                Dock = DockStyle.Top,
-                Padding = new Padding(10),
-                Margin = new Padding(0, 20, 0, 0)
-            };
-
-            var activityTitle = new Label
+            
+            var infoTitle = new Label
             {
                 Text = "Student Information",
-                Font = AppFonts.Heading,
+                Font = new Font(AppFonts.Heading.FontFamily, 12, FontStyle.Bold),
+                ForeColor = AppColors.Text,
                 AutoSize = true,
-                Location = new Point(0, 0)
+                Location = new Point(5, 5)
             };
-
-            var infoList = new ListView
+            studentInfoPanel.Controls.Add(infoTitle);
+            
+            // Create a horizontal panel for student info items
+            var infoItemsPanel = new Panel
             {
-                View = View.Details,
-                FullRowSelect = true,
-                GridLines = true,
-                Location = new Point(0, 40),
-                Size = new Size(mainContentPanel.Width - 40, 240),
-                Font = AppFonts.Body
+                Width = mainContentPanel.Width - 20,
+                Height = 40,
+                Location = new Point(5, 25),
+                BorderStyle = BorderStyle.None
             };
-
-            infoList.Columns.Add("Field", 150);
-            infoList.Columns.Add("Value", 300);
-
+            
+            // Only include essential information - all on one line
             if (currentStudent != null)
             {
-                var items = new[]
+                var infoItems = new[]
                 {
-                    new ListViewItem(new[] { "Email", currentStudent.email ?? "N/A" }),
-                    new ListViewItem(new[] { "Mentor", currentStudent.mentor_name ?? "N/A" }),
-                    new ListViewItem(new[] { "Advisor", currentStudent.advisor_name ?? "N/A" }),
-                    new ListViewItem(new[] { "Course Start", currentStudent.start_date ?? "N/A" }),
-                    new ListViewItem(new[] { "Course End", currentStudent.end_date ?? "N/A" }),
-                    new ListViewItem(new[] { "Program ID", currentStudent.program_id.ToString() }),
-                    new ListViewItem(new[] { "Branch ID", currentStudent.branch_id.ToString() }),
-                    new ListViewItem(new[] { "Release ID", currentStudent.release_id.ToString() })
+                    new { Label = "Email", Value = currentStudent.email ?? "N/A" },
+                    new { Label = "Mentor", Value = currentStudent.mentor_name ?? "N/A" },
+                    new { Label = "Advisor", Value = currentStudent.advisor_name ?? "N/A" },
+                    new { Label = "Start Date", Value = currentStudent.start_date ?? "N/A" },
+                    new { Label = "End Date", Value = currentStudent.end_date ?? "N/A" }
                 };
-                infoList.Items.AddRange(items);
+                
+                int infoItemWidth = 180;
+                int xPos = 0;
+                
+                foreach (var item in infoItems)
+                {
+                    var infoItem = new Panel
+                    {
+                        Width = infoItemWidth,
+                        Height = 40,
+                        Location = new Point(xPos, 0),
+                        BorderStyle = BorderStyle.None
+                    };
+                    
+                    var labelControl = new Label
+                    {
+                        Text = item.Label,
+                        Font = new Font(AppFonts.Body.FontFamily, 9, FontStyle.Bold),
+                        ForeColor = AppColors.Secondary,
+                        AutoSize = true,
+                        Location = new Point(0, 0)
+                    };
+                    
+                    var valueControl = new Label
+                    {
+                        Text = item.Value,
+                        Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Regular),
+                        ForeColor = AppColors.Text,
+                        AutoSize = true,
+                        Location = new Point(0, 20)
+                    };
+                    
+                    infoItem.Controls.Add(labelControl);
+                    infoItem.Controls.Add(valueControl);
+                    infoItemsPanel.Controls.Add(infoItem);
+                    
+                    xPos += infoItemWidth;
+                }
             }
-
-            activityPanel.Controls.Add(activityTitle);
-            activityPanel.Controls.Add(infoList);
-
-            // Schedule Panel
+            
+            studentInfoPanel.Controls.Add(infoItemsPanel);
+            
+            // Add a subtle bottom border to the student info panel
+            studentInfoPanel.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(230, 230, 230), 1))
+                {
+                    e.Graphics.DrawLine(pen, 0, studentInfoPanel.Height - 1, studentInfoPanel.Width, studentInfoPanel.Height - 1);
+                }
+            };
+            
+            // Working Schedule Panel - now has maximum space
             schedulePanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(10)
+                Padding = new Padding(10),
+                BorderStyle = BorderStyle.None
             };
-
+            
+            // Modify the existing schedule code to add proper title and styling
             var scheduleTitle = new Label
             {
                 Text = "Working Schedule",
-                Font = AppFonts.Heading,
+                Font = new Font(AppFonts.Heading.FontFamily, 12, FontStyle.Bold),
+                ForeColor = AppColors.Text,
                 AutoSize = true,
-                Location = new Point(0, 0)
+                Location = new Point(5, 5)
             };
-
+            
+            // Schedule list view with better styling
             var scheduleList = new ListView
             {
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = true,
-                Location = new Point(0, 40),
-                Size = new Size(mainContentPanel.Width - 40, mainContentPanel.Height - 500),
-                Font = AppFonts.Body
+                Location = new Point(5, 30),
+                Size = new Size(mainContentPanel.Width - 30, mainContentPanel.Height - 120), // Adjust height to fill available space
+                Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Regular),
+                BorderStyle = BorderStyle.FixedSingle
             };
-
+            
             scheduleList.Columns.Add("Day", 150);
             scheduleList.Columns.Add("Start Time", 150);
             scheduleList.Columns.Add("End Time", 150);
-
-            if (workingDays != null)
+            
+            if (currentStudent?.working_days != null)
             {
-                var scheduleItems = workingDays.Select(day => 
+                var scheduleItems = currentStudent.working_days.Select(day => 
                     new ListViewItem(new[] { 
                         day.day_name ?? "N/A",
                         day.start_time ?? "N/A",
@@ -167,57 +256,13 @@ namespace Student_App.Forms
                 ).ToArray();
                 scheduleList.Items.AddRange(scheduleItems);
             }
-
+            
             schedulePanel.Controls.Add(scheduleTitle);
             schedulePanel.Controls.Add(scheduleList);
-
-            // Add all panels to main content
+            
+            // Add panels to main content in new order
             mainContentPanel.Controls.Add(schedulePanel);
-            mainContentPanel.Controls.Add(activityPanel);
-            mainContentPanel.Controls.Add(statsPanel);
-        }
-
-        private Panel CreateStatsCard(string title, string value, int width)
-        {
-            var card = new Panel
-            {
-                Width = width,
-                Height = 80,
-                BackColor = Color.White
-            };
-
-            // Add shadow effect
-            card.Paint += (s, e) =>
-            {
-                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
-                using (var pen = new Pen(Color.FromArgb(20, 0, 0, 0), 1))
-                {
-                    e.Graphics.DrawRectangle(pen, rect);
-                }
-            };
-
-            var titleLabel = new Label
-            {
-                Text = title,
-                Font = AppFonts.Body,
-                ForeColor = AppColors.Text,
-                Location = new Point(15, 15),
-                AutoSize = true
-            };
-
-            var valueLabel = new Label
-            {
-                Text = value,
-                Font = new Font(AppFonts.Heading.FontFamily, 16, FontStyle.Bold),
-                ForeColor = AppColors.Secondary,
-                Location = new Point(15, 40),
-                AutoSize = true
-            };
-
-            card.Controls.Add(titleLabel);
-            card.Controls.Add(valueLabel);
-
-            return card;
+            mainContentPanel.Controls.Add(studentInfoPanel);
         }
 
         protected override void Dispose(bool disposing)
