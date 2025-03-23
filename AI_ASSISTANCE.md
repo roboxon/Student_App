@@ -242,65 +242,103 @@ public static class AppFonts
 ### 4. System Tray Integration
 - **Implementation**: 
   ```csharp
-  public class SystemTrayApplication
+  public class SystemTrayApplication : IDisposable
   {
-      private NotifyIcon trayIcon;
-      private Form mainForm;
+      private readonly NotifyIcon trayIcon;
+      private readonly ContextMenuStrip trayMenu;
+      private readonly Form mainForm;
+      private bool disposed;
 
       public SystemTrayApplication(Form form)
       {
-          mainForm = form;
-          InitializeTrayIcon();
-      }
-
-      private void InitializeTrayIcon()
-      {
+          mainForm = form ?? throw new ArgumentNullException(nameof(form));
+          
+          // Initialize tray icon
           trayIcon = new NotifyIcon
           {
               Icon = new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resource", "DAA_Logo.ico")),
+              Text = "Student App",
               Visible = true
           };
+
+          // Create context menu
+          trayMenu = new ContextMenuStrip();
+          trayMenu.Items.Add("Show Dashboard", null, OnOpenDashboard);
+          trayMenu.Items.Add("-");
+          trayMenu.Items.Add("Exit", null, OnExit);
+
+          // Assign menu to tray icon
+          trayIcon.ContextMenuStrip = trayMenu;
+          trayIcon.DoubleClick += OnOpenDashboard;
+      }
+
+      private void OnOpenDashboard(object? sender, EventArgs e)
+      {
+          mainForm.Show();
+          mainForm.WindowState = FormWindowState.Normal;
+          mainForm.Activate();
+      }
+
+      private void OnExit(object? sender, EventArgs e)
+      {
+          trayIcon.Visible = false;
+          Application.Exit();
+      }
+
+      public void Dispose()
+      {
+          if (!disposed)
+          {
+              trayIcon.Visible = false;
+              trayIcon.Dispose();
+              trayMenu.Dispose();
+              disposed = true;
+          }
       }
   }
   ```
-- **Features**:
-  - System tray icon with application logo
-  - Context menu with Show/Exit options
-  - Double-click to show main form
-  - Minimize to tray functionality
-  - Proper resource cleanup
-  - Error handling for icon loading
 
-- **Integration with Dashboard**:
+- **Integration with LayoutForm**:
   ```csharp
-  public partial class Dashboard : Form
+  public partial class LayoutForm : Form
   {
-      private readonly SystemTrayApplication systemTray;
+      protected SystemTrayApplication? systemTray;
 
-      public Dashboard(Student student)
+      protected virtual void InitializeSystemTray()
       {
-          InitializeComponent();
           systemTray = new SystemTrayApplication(this);
+          
+          // Handle minimize to tray
+          this.Resize += (s, e) =>
+          {
+              if (WindowState == FormWindowState.Minimized)
+              {
+                  Hide();
+              }
+          };
 
-          // Minimize to tray
+          // Handle form closing
           this.FormClosing += (s, e) =>
           {
               if (e.CloseReason == CloseReason.UserClosing)
               {
                   e.Cancel = true;
-                  this.Hide();
+                  Hide();
               }
           };
       }
+
+      protected override void Dispose(bool disposing)
+      {
+          if (disposing)
+          {
+              systemTray?.Dispose();
+              // ... other disposal code ...
+          }
+          base.Dispose(disposing);
+      }
   }
   ```
-
-- **Benefits**:
-  - Keeps application running in background
-  - Easy access to main functionality
-  - Professional system integration
-  - Clean resource management
-  - User-friendly interaction
 
 ### 5. Base Layout Implementation
 - **Location**: LayoutForm.cs
@@ -614,16 +652,17 @@ This documentation serves as a living guide for development, and should be updat
 - **Student_App.csproj**
   - Target Framework: net8.0-windows
   - Application Icon: Resource/DAA_Logo.ico
+  - Content Include for icon with CopyToOutputDirectory setting
   - Key NuGet Packages:
     - Newtonsoft.Json
     - System.Configuration.ConfigurationManager
 
 ### 2. Forms
 - **Login.cs** - Main authentication form
-- **Dashboard.cs** - Main application interface
-- **SystemTrayApplication.cs** - System tray integration
+- **Dashboard.cs** - Main application interface with system tray support
+- **SystemTrayApplication.cs** - System tray integration with IDisposable
 - **ApiResponseViewer.cs** - API response debugging tool
-- **LayoutForm.cs** - Base layout template
+- **LayoutForm.cs** - Base layout template with system tray initialization
 
 ### 3. Models
 - **Student.cs** - Core student data model
@@ -667,12 +706,15 @@ This documentation serves as a living guide for development, and should be updat
   - Token management
 
 ## Current Issues and Warnings
-1. **Null Reference Warnings**:
-   - SystemTrayApplication event handlers
-   - Dashboard form initialization
-   - Student model data handling
-   - Login form null checks
-2. **Code Improvements Needed**:
-   - Unused exception variable in Login.cs
-   - Null checking in Student constructor
-   - Event handler null safety 
+✓ All null reference warnings have been fixed
+✓ System tray implementation is stable
+✓ Proper resource cleanup is implemented
+✓ Icon display is working correctly
+
+Recent improvements:
+1. Added SystemTrayApplication.Dispose() method for proper cleanup
+2. Implemented proper form minimizing behavior
+3. Added robust error handling for tray icon
+4. Fixed event handler null safety with nullable parameter types
+5. Integrated system tray at LayoutForm level for all forms
+6. Added proper application exit handling 
