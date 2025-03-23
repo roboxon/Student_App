@@ -212,11 +212,12 @@ namespace Student_App
             }
         }
 
-        private void HandleMenuClick(string menuItem)
+        protected virtual void HandleMenuClick(string menuItem)
         {
             SetActiveMenuItem(menuItem);
-            // Handle menu item clicks here
-            MessageBox.Show($"{menuItem} clicked!");
+            
+            // Let derived classes handle their own menu clicks
+            // Remove any code that opens new windows here
         }
     }
 } 

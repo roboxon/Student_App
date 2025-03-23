@@ -17,6 +17,7 @@ namespace Student_App.Forms
         private CurriculumView curriculumView = new();
         private Student? currentStudent;
         private System.ComponentModel.IContainer components = null;
+        private Panel reportContentPanel;
 
         public Dashboard(Student student)
         {
@@ -246,42 +247,63 @@ namespace Student_App.Forms
 
         private void SetupReportButton()
         {
-            // Find the Reports button if it exists
             if (menuButtons.ContainsKey("Reports"))
             {
-                var reportButton = menuButtons["Reports"];
-                
-                // We can't use reportButton.Click = null
-                // Instead, we'll just add our handler directly
-                // The existing handler in LayoutForm should still work
-                
-                // Add our new handler
-                reportButton.Click += (s, e) => OpenReportsForm();
+                menuButtons["Reports"].Click += (s, e) => ShowReportContent();
             }
         }
 
-        private void OpenReportsForm()
+        private void ShowReportContent()
         {
             try
             {
-                if (currentStudent == null)
-                {
-                    MessageBox.Show("Student information is not available. Please log in again.", 
-                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                // Create only ONE instance of the form
-                var reportForm = new WeeklyReportForm(currentStudent);
+                // Set active menu item
+                SetActiveMenuItem("Reports");
                 
-                // Show it and hide this form
-                reportForm.Show();
-                this.Hide();
+                // Hide any other visible content panels
+                foreach (Control control in mainContentPanel.Controls)
+                {
+                    if (control != reportContentPanel)
+                        control.Visible = false;
+                }
+                
+                // Clear previous report content
+                reportContentPanel.Controls.Clear();
+                
+                // Create report UI directly in the panel
+                CreateReportInterface();
+                
+                // Show the report panel
+                reportContentPanel.Visible = true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error opening Reports form: {ex.Message}", 
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error showing reports: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void CreateReportInterface()
+        {
+            try
+            {
+                // Clear previous content
+                reportContentPanel.Controls.Clear();
+                
+                // Create a new report content panel
+                var reportUI = new ReportContentPanel(currentStudent);
+                reportUI.Dock = DockStyle.Fill;
+                
+                // Add it to the report content panel
+                reportContentPanel.Controls.Add(reportUI);
+                
+                // Show the report panel
+                reportContentPanel.Visible = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error creating report interface: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -296,7 +318,17 @@ namespace Student_App.Forms
         {
             base.InitializeLayoutComponents();
             
-            // After base initialization, modify the Reports button click handler
+            // Create the report content panel
+            reportContentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Visible = false
+            };
+            
+            // Add it to the main content panel
+            mainContentPanel.Controls.Add(reportContentPanel);
+            
+            // Make sure to set up the Reports button
             SetupReportButton();
         }
     }
