@@ -13,6 +13,8 @@ using JsonException = Newtonsoft.Json.JsonException;
 using System.Configuration;
 using Student_App.Models;
 using Student_App.UI;
+using System.Drawing;
+using System.IO;
 
 namespace Student_App.Forms
 {
@@ -39,6 +41,19 @@ namespace Student_App.Forms
             InitializeLoginControls();
             ApplyCommonStyling();
             LoadSavedEmail();
+            try
+            {
+                string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resource", "DAA_Logo.ico");
+                if (File.Exists(iconPath))
+                {
+                    this.Icon = new Icon(iconPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Silently continue if icon loading fails
+                // The application will use the default icon
+            }
         }
 
         private void LoadSavedEmail()
@@ -508,9 +523,9 @@ namespace Student_App.Forms
             {
                 MessageBox.Show(ex.Message, "Login Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                MessageBox.Show($"An unexpected error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"An unexpected error occurred.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {

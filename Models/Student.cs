@@ -49,6 +49,7 @@ namespace Student_App.Models
         // Private constructor from LoginData
         private Student(LoginData data)
         {
+            ArgumentNullException.ThrowIfNull(data);
             if (data?.student == null)
                 throw new JsonException("Invalid student data in response");
 

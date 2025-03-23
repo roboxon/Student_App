@@ -1,138 +1,55 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.IO;
 
 namespace Student_App.Forms
 {
-    public class SystemTrayApplication : Form
+    public class SystemTrayApplication : IDisposable
     {
-        private NotifyIcon? trayIcon;
-        private ContextMenuStrip? trayMenu;
-        private bool isExiting = false;
-        private Dashboard? mainDashboard;
+        private NotifyIcon trayIcon;
+        private ContextMenuStrip trayMenu;
+        private Form mainForm;  // To keep track of the main form
 
-        public SystemTrayApplication()
+        public SystemTrayApplication(Form form)
         {
-            InitializeTrayIcon();
-            InitializeTrayMenu();
-            InitializeMainDashboard();
-        }
-
-        private void InitializeTrayIcon()
-        {
-            trayIcon = new NotifyIcon
-            {
-                Icon = SystemIcons.Application, // Using system icon temporarily
-                Text = "Student App",
-                Visible = true
-            };
-
-            // Handle double-click to show main form
-            trayIcon.DoubleClick += (s, e) => ShowMainDashboard();
+            mainForm = form;
             
-            // Handle form closing
-            this.FormClosing += (s, e) =>
-            {
-                if (!isExiting)
-                {
-                    e.Cancel = true;
-                    this.Hide();
-                    return;
-                }
-            };
-        }
+            // Initialize tray icon
+            trayIcon = new NotifyIcon();
+            trayIcon.Icon = new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resource", "DAA_Logo.ico"));
+            trayIcon.Visible = true;
 
-        private void InitializeTrayMenu()
-        {
+            // Create context menu
             trayMenu = new ContextMenuStrip();
-            var openDashboardItem = new ToolStripMenuItem("Open Dashboard");
-            openDashboardItem.Click += (s, e) => ShowMainDashboard();
-            
-            var reportsItem = new ToolStripMenuItem("Reports");
-            reportsItem.Click += (s, e) => ShowReports();
-            
-            var attendanceItem = new ToolStripMenuItem("Attendance");
-            attendanceItem.Click += (s, e) => ShowAttendance();
-            
-            var exitItem = new ToolStripMenuItem("Exit");
-            exitItem.Click += (s, e) => ExitApplication();
+            trayMenu.Items.Add("Open Dashboard", null, OnOpenDashboard);
+            trayMenu.Items.Add("Exit", null, OnExit);
 
-            trayMenu.Items.AddRange(new ToolStripItem[] 
-            { 
-                openDashboardItem,
-                reportsItem,
-                attendanceItem,
-                new ToolStripSeparator(),
-                exitItem
-            });
+            // Assign menu to tray icon
+            trayIcon.ContextMenuStrip = trayMenu;
+            trayIcon.DoubleClick += OnOpenDashboard;
+        }
 
-            if (trayIcon != null)
+        private void OnOpenDashboard(object sender, EventArgs e)
+        {
+            if (mainForm != null)
             {
-                trayIcon.ContextMenuStrip = trayMenu;
+                mainForm.Show();
+                mainForm.WindowState = FormWindowState.Normal;
+                mainForm.BringToFront();
             }
         }
 
-        private void InitializeMainDashboard()
+        private void OnExit(object sender, EventArgs e)
         {
-            mainDashboard = new Dashboard();
-            mainDashboard.FormClosing += (s, e) =>
-            {
-                if (!isExiting)
-                {
-                    e.Cancel = true;
-                    mainDashboard.Hide();
-                    return;
-                }
-            };
-        }
-
-        private void ShowMainDashboard()
-        {
-            if (mainDashboard != null)
-            {
-                mainDashboard.Show();
-                mainDashboard.WindowState = FormWindowState.Normal;
-                mainDashboard.Activate();
-            }
-        }
-
-        private void ShowReports()
-        {
-            // TODO: Implement reports form
-            MessageBox.Show("Reports functionality coming soon!");
-        }
-
-        private void ShowAttendance()
-        {
-            // TODO: Implement attendance form
-            MessageBox.Show("Attendance functionality coming soon!");
-        }
-
-        private void ExitApplication()
-        {
-            isExiting = true;
-            if (trayIcon != null)
-            {
-                trayIcon.Visible = false;
-            }
+            trayIcon.Visible = false;
             Application.Exit();
         }
 
-        protected override void OnLoad(EventArgs e)
+        public void Dispose()
         {
-            base.OnLoad(e);
-            this.Hide(); // Hide the main form on startup
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                trayIcon?.Dispose();
-                trayMenu?.Dispose();
-                mainDashboard?.Dispose();
-            }
-            base.Dispose(disposing);
+            trayIcon?.Dispose();
+            trayMenu?.Dispose();
         }
     }
 } 

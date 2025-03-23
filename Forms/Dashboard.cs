@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using Student_App.Services.Configuration;
 using Student_App.Models;
 using Student_App.Forms;
+using System.IO;
 
 namespace Student_App.Forms
 {
@@ -13,8 +14,10 @@ namespace Student_App.Forms
         private Panel schedulePanel = new();
         private Student? currentStudent;
         private List<WorkingDay>? workingDays;
+        private SystemTrayApplication? systemTray;
+        private System.ComponentModel.IContainer components = null;
 
-        public Dashboard(Student? student = null, List<WorkingDay>? days = null)
+        public Dashboard(Student student)
         {
             if (student == null)
             {
@@ -25,10 +28,33 @@ namespace Student_App.Forms
                 return;
             }
             currentStudent = student;
-            workingDays = days;
+            workingDays = null;
             InitializeComponent();
+            this.Icon = new Icon(Path.Combine(Application.StartupPath, "Resource", "DAA_Logo.ico"));
             InitializeDashboardControls();
             SetActiveMenuItem("Dashboard");
+            systemTray = new SystemTrayApplication(this);
+
+            // Handle minimize to tray
+            this.FormClosing += (s, e) =>
+            {
+                if (e.CloseReason == CloseReason.UserClosing)
+                {
+                    e.Cancel = true;
+                    this.Hide();
+                }
+            };
+
+            // Handle minimize button
+            this.MinimizeBox = true;
+            this.MinimizeBox = true;
+            this.SizeChanged += (s, e) =>
+            {
+                if (this.WindowState == FormWindowState.Minimized)
+                {
+                    this.Hide();
+                }
+            };
         }
 
         protected override void InitializeComponent()
@@ -209,6 +235,16 @@ namespace Student_App.Forms
             card.Controls.Add(valueLabel);
 
             return card;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                systemTray?.Dispose();
+                components?.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 } 
