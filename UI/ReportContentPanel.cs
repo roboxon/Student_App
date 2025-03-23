@@ -787,52 +787,63 @@ namespace Student_App.UI
                 System.Globalization.CalendarWeekRule.FirstFourDayWeek, 
                 DayOfWeek.Monday);
         }
-    }
 
-    // Add helper class for subject dropdown items
-    private class SubjectItem
-    {
-        public int Id { get; }
-        public string Name { get; }
-        public SubjectWithTopics SubjectWithTopics { get; }
-        
-        public SubjectItem(int id, string name, SubjectWithTopics subjectWithTopics)
+        // Move nested helper classes here
+        private class SubjectItem
         {
-            Id = id;
-            Name = name;
-            SubjectWithTopics = subjectWithTopics;
+            public int Id { get; }
+            public string Name { get; }
+            public SubjectWithTopics SubjectWithTopics { get; }
+            
+            public SubjectItem(int id, string name, SubjectWithTopics subjectWithTopics)
+            {
+                Id = id;
+                Name = name;
+                SubjectWithTopics = subjectWithTopics;
+            }
+            
+            public override string ToString() => Name;
         }
         
-        public override string ToString() => Name;
-    }
-
-    // Add helper class for topic dropdown items
-    private class TopicItem
-    {
-        public int Id { get; }
-        public string Name { get; }
-        public TopicWithLessons TopicWithLessons { get; }
-        
-        public TopicItem(int id, string name, TopicWithLessons topicWithLessons)
+        private class TopicItem
         {
-            Id = id;
-            Name = name;
-            TopicWithLessons = topicWithLessons;
+            public int Id { get; }
+            public string Name { get; }
+            public TopicWithLessons TopicWithLessons { get; }
+            
+            public TopicItem(int id, string name, TopicWithLessons topicWithLessons)
+            {
+                Id = id;
+                Name = name;
+                TopicWithLessons = topicWithLessons;
+            }
+            
+            public override string ToString() => Name;
         }
         
-        public override string ToString() => Name;
-    }
-
-    // Helper class to link dropdowns
-    private class DropdownPair
-    {
-        public HourlyReport Report { get; }
-        public ComboBox TopicDropdown { get; }
-        
-        public DropdownPair(HourlyReport report, ComboBox topicDropdown)
+        private class PrimarySubjectData
         {
-            Report = report;
-            TopicDropdown = topicDropdown;
+            public DailyReport DailyReport { get; }
+            public List<ComboBox> TopicDropdowns { get; }
+            
+            public PrimarySubjectData(DailyReport dailyReport, List<ComboBox> topicDropdowns)
+            {
+                DailyReport = dailyReport;
+                TopicDropdowns = topicDropdowns;
+            }
+        }
+
+        // Helper class to link dropdowns
+        private class DropdownPair
+        {
+            public HourlyReport Report { get; }
+            public ComboBox TopicDropdown { get; }
+            
+            public DropdownPair(HourlyReport report, ComboBox topicDropdown)
+            {
+                Report = report;
+                TopicDropdown = topicDropdown;
+            }
         }
     }
 } 
