@@ -7,6 +7,9 @@ namespace Student_App.Forms
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
+        // Add this field declaration to the Login class (outside of any methods)
+        private System.Windows.Forms.PictureBox logoPictureBox;
+
         /// <summary>
         /// Clean up any resources being used.
         /// </summary>
@@ -28,16 +31,32 @@ namespace Student_App.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            this.SuspendLayout();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Login));
+            logoPictureBox = new PictureBox();
+            ((System.ComponentModel.ISupportInitialize)logoPictureBox).BeginInit();
+            SuspendLayout();
+            // 
+            // logoPictureBox
+            // 
+            logoPictureBox.BackColor = Color.Transparent;
+            logoPictureBox.Image = (Image)resources.GetObject("logoPictureBox.Image");
+            logoPictureBox.Location = new Point(114, 78);
+            logoPictureBox.Name = "logoPictureBox";
+            logoPictureBox.Size = new Size(150, 150);
+            logoPictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+            logoPictureBox.TabIndex = 10;
+            logoPictureBox.TabStop = false;
             // 
             // Login
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(400, 300);
-            this.Name = "Login";
-            this.Text = "Login";
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(400, 300);
+            Controls.Add(logoPictureBox);
+            Name = "Login";
+            Text = "Login";
+            ((System.ComponentModel.ISupportInitialize)logoPictureBox).EndInit();
+            ResumeLayout(false);
         }
 
         #endregion
