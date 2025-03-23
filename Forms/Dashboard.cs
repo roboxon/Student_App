@@ -261,9 +261,25 @@ namespace Student_App.Forms
 
         private void OpenReportsForm()
         {
-            var reportForm = new WeeklyReportForm(currentStudent);
-            reportForm.Show();
-            this.Hide();
+            // Add null check for currentStudent
+            if (currentStudent == null)
+            {
+                MessageBox.Show("Student information is not available. Please log in again.", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            try
+            {
+                var reportForm = new WeeklyReportForm(currentStudent);
+                reportForm.Show();
+                this.Hide();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening Reports form: {ex.Message}\n\n{ex.StackTrace}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         // Get the current student
