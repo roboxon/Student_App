@@ -10,10 +10,10 @@ namespace Student_App.Forms
     public partial class Dashboard : LayoutForm
     {
         private Panel statsPanel = new();
-        private Panel activityPanel = new();
-        private Panel schedulePanel = new();
+        private Panel studentInfoPanel = new();
+        private Panel curriculumPanel = new();
         private Student? currentStudent;
-        private List<WorkingDay>? workingDays;
+        private Release? currentRelease;
         private System.ComponentModel.IContainer components = null;
 
         public Dashboard(Student student)
@@ -28,11 +28,219 @@ namespace Student_App.Forms
             }
             
             currentStudent = student;
-            workingDays = null;
+            
+            // Initialize components first
             InitializeComponent();
+            
+            // Set icon and initialize dashboard controls
             this.Icon = new Icon(Path.Combine(Application.StartupPath, "Resource", "DAA_Logo.ico"));
             InitializeDashboardControls();
             SetActiveMenuItem("Dashboard");
+            
+            // Load Release data asynchronously
+            LoadReleaseDataAsync();
+        }
+
+        private async void LoadReleaseDataAsync()
+        {
+            try
+            {
+                // Show loading indicator
+                var loadingPanel = new Panel
+                {
+                    Dock = DockStyle.Fill,
+                    BackColor = Color.FromArgb(100, 255, 255, 255)
+                };
+                
+                var loadingLabel = new Label
+                {
+                    Text = "Loading curriculum data...",
+                    AutoSize = false,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Dock = DockStyle.Fill,
+                    Font = new Font(AppFonts.Body.FontFamily, 12, FontStyle.Bold)
+                };
+                
+                loadingPanel.Controls.Add(loadingLabel);
+                loadingPanel.Tag = "LoadingPanel";
+                
+                mainContentPanel.Controls.Add(loadingPanel);
+                loadingPanel.BringToFront();
+                
+                // Ensure currentStudent is not null before calling API
+                if (currentStudent != null)
+                {
+                    // Load release data
+                    currentRelease = await Release.GetReleaseAsync(currentStudent);
+                    
+                    // Update UI with the data
+                    UpdateCurriculumPanel();
+                }
+                
+                // Remove loading panel
+                mainContentPanel.Controls.Remove(loadingPanel);
+                loadingPanel.Dispose();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load curriculum data: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                
+                // Clean up loading panel if it exists
+                foreach (Control c in mainContentPanel.Controls)
+                {
+                    if (c is Panel p && p.Tag?.ToString() == "LoadingPanel")
+                    {
+                        mainContentPanel.Controls.Remove(p);
+                        p.Dispose();
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void UpdateCurriculumPanel()
+        {
+            if (currentRelease == null || currentRelease.content == null)
+                return;
+            
+            // Clear existing controls except the loading panel
+            foreach (Control control in curriculumPanel.Controls)
+            {
+                if (control is Panel panel && panel.Tag?.ToString() != "LoadingPanel")
+                {
+                    curriculumPanel.Controls.Remove(control);
+                    control.Dispose();
+                }
+            }
+            
+            // Add title for the curriculum panel
+            var titleLabel = new Label
+            {
+                Text = $"Curriculum: {currentRelease.title}",
+                Font = new Font(AppFonts.Heading.FontFamily, 14, FontStyle.Bold),
+                ForeColor = AppColors.Text,
+                AutoSize = true,
+                Location = new Point(10, 10)
+            };
+            curriculumPanel.Controls.Add(titleLabel);
+            
+            // Add program description
+            var programDescLabel = new Label
+            {
+                Text = currentRelease.content.program?.program_description ?? "No description available",
+                Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Regular),
+                ForeColor = AppColors.Secondary,
+                AutoSize = false,
+                Size = new Size(curriculumPanel.Width - 40, 40),
+                Location = new Point(10, 40)
+            };
+            curriculumPanel.Controls.Add(programDescLabel);
+            
+            // Create the curriculum tree view
+            var treeView = new TreeView
+            {
+                Location = new Point(10, 90),
+                Size = new Size(curriculumPanel.Width - 40, curriculumPanel.Height - 100),
+                Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Regular),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                ShowNodeToolTips = true
+            };
+            
+            // Populate the tree with subjects and topics
+            if (currentRelease.content.subjects != null)
+            {
+                foreach (var subjectWithTopics in currentRelease.content.subjects)
+                {
+                    if (subjectWithTopics.subject == null)
+                        continue;
+                    
+                    var subject = subjectWithTopics.subject;
+                    var subjectNode = new TreeNode(subject.subject_name ?? "Unnamed Subject");
+                    subjectNode.ToolTipText = subject.subject_description;
+                    subjectNode.Tag = subject;
+                    
+                    // Add details to node text
+                    subjectNode.Text = $"{subject.subject_name} ({subject.subject_hours} hours)";
+                    
+                    // Add topics as child nodes
+                    if (subjectWithTopics.topics != null)
+                    {
+                        foreach (var topicWithLessons in subjectWithTopics.topics)
+                        {
+                            if (topicWithLessons.topic == null)
+                                continue;
+                            
+                            var topic = topicWithLessons.topic;
+                            var topicNode = new TreeNode(topic.topic_name ?? "Unnamed Topic");
+                            topicNode.ToolTipText = topic.topic_description;
+                            topicNode.Tag = topic;
+                            
+                            // Add details to node text
+                            topicNode.Text = $"{topic.topic_name} ({topic.topic_hours} hours)";
+                            
+                            // Add lessons as child nodes
+                            if (topicWithLessons.lessons != null)
+                            {
+                                foreach (var lesson in topicWithLessons.lessons)
+                                {
+                                    var lessonNode = new TreeNode(lesson.lesson_name ?? "Unnamed Lesson");
+                                    lessonNode.ToolTipText = lesson.lesson_description;
+                                    lessonNode.Tag = lesson;
+                                    
+                                    // Add details to node text
+                                    lessonNode.Text = $"{lesson.lesson_name} ({lesson.lesson_hours} hours)";
+                                    
+                                    topicNode.Nodes.Add(lessonNode);
+                                }
+                            }
+                            
+                            // Add resources as a special node if they exist
+                            if (topicWithLessons.resources != null && topicWithLessons.resources.Count > 0)
+                            {
+                                var resourcesNode = new TreeNode("Resources");
+                                resourcesNode.ForeColor = AppColors.Primary;
+                                
+                                foreach (var resource in topicWithLessons.resources)
+                                {
+                                    var resourceNode = new TreeNode(resource.description ?? "Unnamed Resource");
+                                    resourceNode.ToolTipText = resource.url_link;
+                                    resourceNode.Tag = resource;
+                                    resourcesNode.Nodes.Add(resourceNode);
+                                }
+                                
+                                topicNode.Nodes.Add(resourcesNode);
+                            }
+                            
+                            subjectNode.Nodes.Add(topicNode);
+                        }
+                    }
+                    
+                    treeView.Nodes.Add(subjectNode);
+                }
+            }
+            
+            // Set up event handler for node double-click (for resources)
+            treeView.NodeMouseDoubleClick += (s, e) => {
+                if (e.Node.Tag is Resource resource && !string.IsNullOrEmpty(resource.url_link))
+                {
+                    try
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = resource.url_link,
+                            UseShellExecute = true
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Could not open URL: {ex.Message}", "Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            };
+            
+            curriculumPanel.Controls.Add(treeView);
         }
 
         protected override void InitializeComponent()
@@ -40,31 +248,12 @@ namespace Student_App.Forms
             base.InitializeComponent();
             this.Text = "Student Dashboard";
             
-            // Modify the header panel
-            headerPanel.Height = 60; // Reduced height
-            headerPanel.Padding = new Padding(10, 0, 10, 0); // Reduce vertical padding
-            
+            // Update header with student info
             if (currentStudent != null)
             {
-                // Create a single row panel for all header info
-                var headerInfoPanel = new Panel
-                {
-                    Dock = DockStyle.Fill,
-                    BackColor = Color.Transparent
-                };
+                UpdateUserInfo($"{currentStudent.first_name} {currentStudent.last_name}");
                 
-                // Welcome message - now as first item
-                var welcomeLabel = new Label
-                {
-                    Text = $"Welcome, {currentStudent.first_name} {currentStudent.last_name}",
-                    Font = new Font(AppFonts.Body.FontFamily, 12, FontStyle.Regular),
-                    ForeColor = Color.White,
-                    AutoSize = true,
-                    Location = new Point(5, 20) // Centered vertically
-                };
-                headerInfoPanel.Controls.Add(welcomeLabel);
-                
-                // Stats items with smaller font
+                // Add stats to header
                 var statsItems = new[]
                 {
                     new { Label = "Course", Value = currentStudent.plan_name ?? "N/A" },
@@ -73,9 +262,10 @@ namespace Student_App.Forms
                     new { Label = "Status", Value = currentStudent.is_active == 1 ? "Active" : "Inactive" }
                 };
                 
-                // Calculate positions - starting after welcome message
-                int startX = welcomeLabel.Width + 80; // Start after welcome with some padding
-                int itemWidth = 140; // Reduced width for each item
+                // Use the existing header space for stats
+                int headerWidth = headerPanel.Width;
+                int startX = 400; // After welcome message
+                int itemWidth = 140;
                 
                 foreach (var item in statsItems)
                 {
@@ -83,7 +273,7 @@ namespace Student_App.Forms
                     {
                         Width = itemWidth,
                         Height = 40,
-                        Location = new Point(startX, 10), // Centered in header
+                        Location = new Point(startX, 10),
                         BackColor = Color.Transparent
                     };
                     
@@ -107,21 +297,17 @@ namespace Student_App.Forms
                     
                     statPanel.Controls.Add(labelControl);
                     statPanel.Controls.Add(valueControl);
-                    headerInfoPanel.Controls.Add(statPanel);
+                    headerPanel.Controls.Add(statPanel);
                     
                     startX += itemWidth;
                 }
-                
-                // Clear existing controls and add the new panel
-                headerPanel.Controls.Clear();
-                headerPanel.Controls.Add(headerInfoPanel);
             }
         }
 
         private void InitializeDashboardControls()
         {
             // Student Information panel with proper formatting
-            var studentInfoPanel = new Panel
+            studentInfoPanel = new Panel
             {
                 Height = 70, // Further reduced height
                 Dock = DockStyle.Top,
@@ -211,147 +397,23 @@ namespace Student_App.Forms
                 }
             };
             
-            // Working Schedule Panel - redesigned as compact rows
-            var schedulePanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 100, // Reduced height for compact display
-                Padding = new Padding(10, 5, 10, 5),
-                BorderStyle = BorderStyle.None,
-                Margin = new Padding(0, 10, 0, 0)
-            };
-            
-            var scheduleTitle = new Label
-            {
-                Text = "Working Schedule",
-                Font = new Font(AppFonts.Heading.FontFamily, 12, FontStyle.Bold),
-                ForeColor = AppColors.Text,
-                AutoSize = true,
-                Location = new Point(5, 5)
-            };
-            schedulePanel.Controls.Add(scheduleTitle);
-            
-            // Create a flow panel for the days
-            var daysPanel = new FlowLayoutPanel
-            {
-                Width = mainContentPanel.Width - 30,
-                Height = 70,
-                Location = new Point(5, 25),
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
-                AutoScroll = true,
-                BorderStyle = BorderStyle.None
-            };
-            
-            // Add each working day as a compact card
-            if (currentStudent?.working_days != null && currentStudent.working_days.Any())
-            {
-                foreach (var day in currentStudent.working_days)
-                {
-                    var dayCard = CreateWorkingDayCard(
-                        day.day_name ?? "N/A", 
-                        day.start_time ?? "N/A", 
-                        day.end_time ?? "N/A"
-                    );
-                    daysPanel.Controls.Add(dayCard);
-                }
-            }
-            else
-            {
-                // If no working days, show a message
-                var noScheduleLabel = new Label
-                {
-                    Text = "No working days scheduled",
-                    Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Italic),
-                    ForeColor = AppColors.Secondary,
-                    AutoSize = true,
-                    Location = new Point(10, 10)
-                };
-                daysPanel.Controls.Add(noScheduleLabel);
-            }
-            
-            schedulePanel.Controls.Add(daysPanel);
-            
-            // Add a subtle bottom border to the schedule panel
-            schedulePanel.Paint += (s, e) =>
-            {
-                using (var pen = new Pen(Color.FromArgb(230, 230, 230), 1))
-                {
-                    e.Graphics.DrawLine(pen, 0, schedulePanel.Height - 1, schedulePanel.Width, schedulePanel.Height - 1);
-                }
-            };
-            
-            // Create a content panel for any future content
-            var contentPanel = new Panel
+            // Curriculum Panel - main content area
+            curriculumPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(10),
+                Padding = new Padding(10, 10, 10, 10),
                 BorderStyle = BorderStyle.None
             };
             
             // Add panels to main content in new order
-            mainContentPanel.Controls.Add(contentPanel);
-            mainContentPanel.Controls.Add(schedulePanel);
+            mainContentPanel.Controls.Add(curriculumPanel);
             mainContentPanel.Controls.Add(studentInfoPanel);
-        }
-
-        // Helper method to create a working day card
-        private Panel CreateWorkingDayCard(string dayName, string startTime, string endTime)
-        {
-            var card = new Panel
-            {
-                Width = 135,
-                Height = 60,
-                Margin = new Padding(5),
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.None
-            };
-            
-            // Add a subtle border and light background
-            card.Paint += (s, e) =>
-            {
-                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
-                using (var bgBrush = new SolidBrush(Color.FromArgb(250, 250, 252)))
-                {
-                    e.Graphics.FillRectangle(bgBrush, rect);
-                }
-                using (var pen = new Pen(Color.FromArgb(230, 230, 230), 1))
-                {
-                    e.Graphics.DrawRectangle(pen, rect);
-                }
-            };
-            
-            // Day name in a prominent position
-            var dayLabel = new Label
-            {
-                Text = dayName,
-                Font = new Font(AppFonts.Body.FontFamily, 10, FontStyle.Bold),
-                ForeColor = AppColors.Primary,
-                AutoSize = true,
-                Location = new Point(8, 8)
-            };
-            
-            // Time information in a compact format
-            var timeLabel = new Label
-            {
-                Text = $"{startTime} - {endTime}",
-                Font = new Font(AppFonts.Body.FontFamily, 9, FontStyle.Regular),
-                ForeColor = AppColors.Text,
-                AutoSize = true,
-                Location = new Point(8, 30)
-            };
-            
-            card.Controls.Add(dayLabel);
-            card.Controls.Add(timeLabel);
-            
-            return card;
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                // Remove system tray disposal
                 components?.Dispose();
             }
             base.Dispose(disposing);
