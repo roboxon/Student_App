@@ -1,10 +1,17 @@
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace Student_App.Models
 {
     public class Student
     {
+        private static readonly HttpClient _client = new HttpClient();
+        private static readonly string API_URL = "https://training.elexbo.de/studentLogin/loginByemailPassword";
+
+        // Properties
         public int id { get; set; }
         public int company_id { get; set; }
         public int course_id { get; set; }
@@ -36,18 +43,16 @@ namespace Student_App.Models
         public string? refresh_token { get; set; }
         public List<WorkingDay> working_days { get; set; } = new List<WorkingDay>();
 
+        // Default constructor
         public Student() { }
 
-        public Student(string jsonResponse)
+        // Private constructor from LoginData
+        private Student(LoginData data)
         {
-            var loginResponse = JsonConvert.DeserializeObject<LoginResponse>(jsonResponse);
-            
-            if (loginResponse?.data?.student == null)
-            {
+            if (data?.student == null)
                 throw new JsonException("Invalid student data in response");
-            }
 
-            var student = loginResponse.data.student;
+            var student = data.student;
             
             // Assign non-nullable properties
             id = student.id;
@@ -81,13 +86,13 @@ namespace Student_App.Models
             tag = student.tag;
 
             // Assign tokens
-            access_token = loginResponse.data.access_token;
-            refresh_token = loginResponse.data.refresh_token;
+            access_token = data.access_token;
+            refresh_token = data.refresh_token;
 
             // Add working days
-            if (loginResponse.data.days != null)
+            if (data.days != null)
             {
-                foreach (var day in loginResponse.data.days)
+                foreach (var day in data.days)
                 {
                     working_days.Add(new WorkingDay
                     {
@@ -101,5 +106,38 @@ namespace Student_App.Models
                 }
             }
         }
+
+        // Static factory method for login
+        public static async Task<Student> LoginAsync(string email, string password)
+        {
+            var content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("email", email),
+                new KeyValuePair<string, string>("password", password),
+                new KeyValuePair<string, string>("company_id", "1")
+            });
+
+            var response = await _client.PostAsync(API_URL, content);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorResponse = JsonConvert.DeserializeObject<LoginResponse>(responseContent);
+                throw new ApiException(errorResponse?.service_message ?? "Login failed");
+            }
+
+            var loginResponse = JsonConvert.DeserializeObject<LoginResponse>(responseContent);
+            if (loginResponse == null || !loginResponse.IsSuccessful())
+            {
+                throw new ApiException(loginResponse?.GetErrorMessage() ?? "Invalid response format");
+            }
+
+            return new Student(loginResponse.data);
+        }
+    }
+
+    public class ApiException : Exception
+    {
+        public ApiException(string message) : base(message) { }
     }
 }

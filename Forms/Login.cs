@@ -7,13 +7,12 @@ using System.Net.Http.Headers;
 using System.Web;
 using Newtonsoft.Json;
 using System.Collections.Generic;
-using Student_App.Services;
-using Student_App.Services.Configuration;
 using System.Text.Json;
 using System.Drawing.Drawing2D;
 using JsonException = Newtonsoft.Json.JsonException;
 using System.Configuration;
 using Student_App.Models;
+using Student_App.UI;
 
 namespace Student_App.Forms
 {
@@ -468,7 +467,7 @@ namespace Student_App.Forms
             };
         }
 
-        private async void LoginButton_Click(object sender, EventArgs e)
+        private async void LoginButton_Click(object? sender, EventArgs e)
         {
             try
             {
@@ -487,7 +486,7 @@ namespace Student_App.Forms
                 }
 
                 // Handle remember email
-                if (RememberEmailCheckBox?.Checked == true)
+                if (RememberEmailCheckBox?.Checked == true && EmailTextBox != null)
                 {
                     SaveEmail(EmailTextBox.Text);
                 }
@@ -496,69 +495,18 @@ namespace Student_App.Forms
                     ClearSavedEmail();
                 }
 
-                var content = new FormUrlEncodedContent(new[]
-                {
-                    new KeyValuePair<string, string>("email", EmailTextBox.Text),
-                    new KeyValuePair<string, string>("password", PasswordTextBox.Text),
-                    new KeyValuePair<string, string>("company_id", DEFAULT_COMPANY_ID)
-                });
+                // Login using the Student model
+                var student = await Student.LoginAsync(EmailTextBox!.Text, PasswordTextBox!.Text);
 
-                using var client = new HttpClient();
-                var response = await client.PostAsync(API_URL, content);
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                // Show response in development mode
-                if (AppConfig.Environment.IsDevelopment)
-                {
-                    var viewer = new ApiResponseViewer("API Response", responseContent);
-                    viewer.Show();
-                }
-
-                if (response.IsSuccessStatusCode)
-                {
-                    try
-                    {
-                        // Create student instance from JSON response
-                        var student = new Student(responseContent);
-
-                        // Store tokens
-                        TokenService.Instance.StoreTokens(
-                            student.access_token ?? string.Empty,
-                            student.refresh_token ?? string.Empty
-                        );
-
-                        // Create and show dashboard
-                        var dashboard = new Dashboard(student);
-                        this.Hide();
-                        dashboard.ShowDialog();
-                        this.Close();
-                    }
-                    catch (JsonException ex)
-                    {
-                        MessageBox.Show($"Error parsing response: {ex.Message}", "Response Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-                else
-                {
-                    var errorMessage = $"Login failed: {response.StatusCode}";
-                    if (!string.IsNullOrEmpty(responseContent))
-                    {
-                        try
-                        {
-                            var errorResponse = JsonConvert.DeserializeObject<LoginResponse>(responseContent);
-                            errorMessage += $"\n{errorResponse?.service_message ?? responseContent}";
-                        }
-                        catch
-                        {
-                            errorMessage += $"\n{responseContent}";
-                        }
-                    }
-                    MessageBox.Show(errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                // Create and show dashboard
+                var dashboard = new Dashboard(student);
+                this.Hide();
+                dashboard.ShowDialog();
+                this.Close();
             }
-            catch (HttpRequestException ex)
+            catch (ApiException ex)
             {
-                MessageBox.Show($"Network error: {ex.Message}", "Connection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, "Login Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
