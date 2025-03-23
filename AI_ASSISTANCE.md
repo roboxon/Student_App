@@ -19,7 +19,7 @@ This is a Windows Forms application designed for student activities management, 
 - **Login.cs** - Main authentication form
 - **Dashboard.cs** - Main application interface
 - **ApiResponseViewer.cs** - API response debugging tool
-- **LayoutForm.cs** - Base layout template
+- **LayoutForm.cs** - Base layout template for all forms
 
 ### 3. Models
 - **Student.cs** - Core student data model
@@ -33,10 +33,9 @@ This is a Windows Forms application designed for student activities management, 
   - API endpoints
   - Service configurations
 - **AppConfig.cs** - Configuration access layer
-- **AppStyles.cs** - UI style configurations
 
 ### 5. UI
-- **AppTheme.cs** - Theme colors and fonts
+- **AppTheme.cs** - Centralized theme management with colors, fonts, and layout specifications
 
 ### 6. Resources
 - **DAA_Logo.ico** - Application icon
@@ -83,6 +82,15 @@ This is a Windows Forms application designed for student activities management, 
    - ✓ Response validation
    - ✓ JSON parsing and deserialization
 
+4. **UI Theme and Layout**
+   - ✓ Centralized AppTheme.cs for global styling
+   - ✓ Standardized colors with semantic naming
+   - ✓ Consistent font definitions
+   - ✓ Fixed form width (850px) for consistent experience
+   - ✓ Standardized layout measurements
+   - ✓ Dark gray header and footer styling
+   - ✓ Base LayoutForm for consistent UI structure
+
 ### Current Status
 ✓ All null reference warnings have been fixed
 ✓ System tray implementation is stable using ApplicationContext pattern
@@ -90,6 +98,7 @@ This is a Windows Forms application designed for student activities management, 
 ✓ Icon display is working correctly and persists on minimize
 ✓ Release curriculum data loading and display
 ✓ Local caching of API responses
+✓ Centralized theme management with AppTheme and AppLayout
 
 Recent improvements:
 1. Implemented TrayApplicationContext for reliable system tray management
@@ -101,6 +110,9 @@ Recent improvements:
 7. Added Release API integration with hierarchical display
 8. Implemented local caching for improved performance
 9. Added resource links for curriculum materials
+10. Standardized UI with centralized AppTheme and AppLayout
+11. Created consistent header/footer styling across forms
+12. Implemented fixed form width (850px) for better usability
 
 ### Pending Features
 1. **Reports Module**
@@ -303,25 +315,101 @@ public class ApiException : Exception
 ### 3. UI Theme Management
 ```csharp
 // UI/AppTheme.cs
-public static class AppColors
+namespace Student_App.UI
 {
-    public static readonly Color Primary = Color.FromArgb(0, 123, 255);
-    public static readonly Color Secondary = Color.FromArgb(108, 117, 125);
-    public static readonly Color Success = Color.FromArgb(40, 167, 69);
-    public static readonly Color Error = Color.FromArgb(220, 53, 69);
-    public static readonly Color Text = Color.FromArgb(33, 37, 41);
-}
+    public static class AppColors
+    {
+        public static readonly Color Primary = Color.FromArgb(0, 123, 255);
+        public static readonly Color Secondary = Color.FromArgb(64, 64, 64);
+        public static readonly Color HeaderFooter = Color.FromArgb(50, 50, 50);
+        public static readonly Color Success = Color.FromArgb(40, 167, 69);
+        public static readonly Color Error = Color.FromArgb(220, 53, 69);
+        public static readonly Color Text = Color.FromArgb(33, 37, 41);
+        public static readonly Color Background = Color.White;
+        public static readonly Color LightGray = Color.FromArgb(245, 245, 245);
+        public static readonly Color Border = Color.FromArgb(222, 226, 230);
+    }
 
-public static class AppFonts
-{
-    public static readonly Font Title = new Font("Segoe UI", 24, FontStyle.Regular);
-    public static readonly Font Subtitle = new Font("Segoe UI", 18, FontStyle.Regular);
-    public static readonly Font Body = new Font("Segoe UI", 12, FontStyle.Regular);
-    public static readonly Font Small = new Font("Segoe UI", 10, FontStyle.Regular);
+    public static class AppFonts
+    {
+        public static readonly Font Title = new Font("Segoe UI", 24, FontStyle.Regular);
+        public static readonly Font Subtitle = new Font("Segoe UI", 18, FontStyle.Regular);
+        public static readonly Font Body = new Font("Segoe UI", 12, FontStyle.Regular);
+        public static readonly Font Small = new Font("Segoe UI", 10, FontStyle.Regular);
+        public static readonly Font Bold = new Font("Segoe UI", 12, FontStyle.Bold);
+        public static readonly Font BoldSmall = new Font("Segoe UI", 10, FontStyle.Bold);
+    }
+
+    public static class AppLayout
+    {
+        public static readonly int FormWidth = 850;
+        public static readonly int HeaderHeight = 60;
+        public static readonly int FooterHeight = 30;
+        public static readonly int Padding = 10;
+        public static readonly int Margin = 8;
+        public static readonly int BorderRadius = 5;
+        public static readonly int CardElevation = 2;
+        public static readonly int ContentWidth = FormWidth - (2 * Margin);
+    }
 }
 ```
 
-### 4. System Tray Integration
+### 4. Base Layout Form
+```csharp
+// LayoutForm.cs
+namespace Student_App
+{
+    public partial class LayoutForm : Form
+    {
+        private bool disposedValue;
+        protected Panel mainContentPanel = new();
+        protected Panel headerPanel = new();
+        protected Panel sideMenuPanel = new();
+        protected Panel footerPanel = new();
+        protected Label titleLabel = new();
+        protected Label userLabel = new();
+        protected Panel contentWrapper = new();
+        protected Dictionary<string, Button> menuButtons = new();
+
+        public LayoutForm()
+        {
+            InitializeComponent();
+            InitializeLayoutComponents();
+        }
+
+        protected virtual void InitializeComponent()
+        {
+            this.Text = "Student App";
+            this.Size = new Size(AppLayout.FormWidth, 800);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.BackColor = AppColors.Background;
+            this.MinimumSize = new Size(800, 600);
+        }
+
+        protected virtual void InitializeLayoutComponents()
+        {
+            // Header Panel
+            headerPanel.Dock = DockStyle.Top;
+            headerPanel.Height = AppLayout.HeaderHeight;
+            headerPanel.BackColor = AppColors.HeaderFooter;
+            headerPanel.Padding = new Padding(20);
+            
+            // ... additional setup ...
+            
+            // Footer Panel
+            footerPanel.Dock = DockStyle.Bottom;
+            footerPanel.Height = AppLayout.FooterHeight;
+            footerPanel.BackColor = AppColors.HeaderFooter;
+            
+            // ... additional setup ...
+        }
+        
+        // ... additional methods ...
+    }
+}
+```
+
+### 5. System Tray Integration
 - **Implementation**: Uses ApplicationContext pattern for reliable system tray functionality
   ```csharp
   public class TrayApplicationContext : ApplicationContext
@@ -376,65 +464,61 @@ public static class AppFonts
   }
   ```
 
-- **Program.cs Integration**:
-  ```csharp
-  static void Main()
-  {
-      ApplicationConfiguration.Initialize();
-      
-      // Create and start the application context
-      var trayContext = TrayApplicationContext.Instance;
-      
-      // Create the login form and show it
-      var loginForm = new Login();
-      loginForm.Show();
-      
-      // Add the login form to the context
-      trayContext.SetForm(loginForm);
-      
-      // Run the application with our custom context
-      Application.Run(trayContext);
-  }
-  ```
+## Key Implementation Details
 
-- **Form Switching**:
-  ```csharp
-  private void OpenDashboard(Student student)
-  {
-      var dashboard = new Dashboard(student);
-      dashboard.Show();
-      
-      // Update the application context with the new form
-      TrayApplicationContext.Instance.SetForm(dashboard);
-      
-      this.Hide();
-  }
-  ```
-
+### UI Theming System
+- **Status**: Implemented and evolving
+- **Location**: UI/AppTheme.cs
 - **Features**:
-  - Persistent system tray icon regardless of form state
-  - Context menu with Show and Exit options
-  - Double-click to show current form
-  - Minimize to tray functionality
-  - Proper resource cleanup on application exit
-  - Seamless form switching
+  - Centralized color definitions
+  - Standardized font definitions
+  - Fixed form width (850px)
+  - Standardized layout measurements
+  - Dark gray header and footer styling
+  - Consistent spacing values
+  - Border radius standards
+  - Margin and padding definitions
 
-- **Benefits**:
-  - Reliable background operation for attendance monitoring
-  - Application remains accessible even when minimized
-  - Centralized icon management
-  - Consistent behavior across all forms
-  - Proper application lifecycle management
-  - Low memory footprint when running in background
+#### AppColors
+The AppColors static class defines a consistent color palette for the entire application:
+- **Primary**: Main brand color (0, 123, 255)
+- **Secondary**: Secondary color for UI elements (64, 64, 64)
+- **HeaderFooter**: Specific dark gray for headers and footers (50, 50, 50)
+- **Success**: For success messages (40, 167, 69)
+- **Error**: For error states (220, 53, 69)
+- **Text**: Standard text color (33, 37, 41)
+- **Background**: Form background color (White)
+- **LightGray**: For alternate row colors (245, 245, 245)
+- **Border**: For borders and dividers (222, 226, 230)
 
-### 5. Base Layout Implementation
+#### AppFonts
+The AppFonts static class provides consistent typography across the application:
+- **Title**: Large font for main headings (Segoe UI, 24pt)
+- **Subtitle**: For section headings (Segoe UI, 18pt)
+- **Body**: For main content (Segoe UI, 12pt)
+- **Small**: For footer text and small info (Segoe UI, 10pt)
+- **Bold**: Bold version of body text (Segoe UI, 12pt, Bold)
+- **BoldSmall**: Bold small text (Segoe UI, 10pt, Bold)
+
+#### AppLayout
+The AppLayout static class defines key dimensions and spacing for consistent UI layout:
+- **FormWidth**: Fixed width of 850 pixels for all forms
+- **HeaderHeight**: Standard 60-pixel height for headers
+- **FooterHeight**: Standard 30-pixel height for footers
+- **Padding**: Standard 10-pixel internal padding
+- **Margin**: Standard 8-pixel margins between elements
+- **BorderRadius**: 5-pixel border radius for rounded corners
+- **CardElevation**: 2-pixel elevation for card shadows
+- **ContentWidth**: Calculated content width (FormWidth - 2*Margin)
+
+### Base Layout Implementation
 - **Location**: LayoutForm.cs
 - **Features**:
-  - Header Panel (60px height)
+  - Header Panel using AppColors.HeaderFooter (dark gray)
+  - Fixed form width of AppLayout.FormWidth (850px)
   - Side Menu Panel (200px width)
-  - Content Wrapper
-  - Footer Panel (30px height)
-  - Responsive design (min size 800x600)
+  - Content Wrapper with proper padding
+  - Footer Panel using AppColors.HeaderFooter (dark gray)
   - Dynamic menu system
   - User info display
   - Status indicators
@@ -442,366 +526,115 @@ public static class AppFonts
   - Shadow effects
   - Rounded corners
 
-### 6. Project Configuration
-- **Target Framework**: .NET 8.0 Windows
-- **Application Icon**: Resource/DAA_Logo.ico
-- **Dependencies**:
-  - Newtonsoft.Json
-  - System.Configuration.ConfigurationManager
-- **Configuration**: App.config with service endpoints and settings
-
-## Key Implementation Details
-
-### Login Form Implementation
-- **Status**: Implemented
-- **Location**: Forms/Login.cs
-- **Features**:
-  - Modern UI with gradient background
-  - Rounded corners and shadows
-  - Draggable panels for easy movement
-  - Remember email functionality
-  - Comprehensive error handling
-  - Form validation
-  - User-friendly error messages
-  - Smooth transitions and animations
-
 ### Dashboard Implementation
 - **Status**: Implemented
 - **Location**: Forms/Dashboard.cs
 - **Features**:
-  - Modern header with user info
-  - Sleek side menu with hover effects
-  - Clean content area with rounded corners
-  - Status footer with version info
-  - Stats cards showing:
-    - Course information
-    - Group details
-    - Grade score
-    - Active status
-  - Student information panel with:
-    - Email
-    - Mentor details
-    - Advisor information
-    - Course dates
-    - Program details
-  - Working schedule panel with:
-    - Day information
-    - Start/End times
-    - Schedule layout
-  - Responsive layout
-  - Professional color scheme
-  - Consistent typography
-
-## Design Patterns
-
-### 1. Model-Centric API Communication
-- **Implementation**: Student model handles its own API communication
-- **Usage**:
-  ```csharp
-  // In Login.cs
-  var student = await Student.LoginAsync(email, password);
-  var dashboard = new Dashboard(student);
-  ```
-- **Benefits**:
-  - Simpler architecture
-  - Clear responsibility boundaries
-  - Easier testing
-  - Reduced code complexity
-  - Better encapsulation
-
-### 2. Static Factory Pattern
-- **Implementation**: Student.LoginAsync static factory method
-- **Benefits**:
-  - Encapsulated object creation
-  - Private constructor for data validation
-  - Clear API for object creation
-  - Better error handling
+  - Inherits from LayoutForm for consistent theming
+  - Uses AppColors and AppFonts for styling
+  - Respects the fixed form width (850px)
+  - Dark gray header and footer
+  - Student information panel
+  - Curriculum view panel
+  - Stats displayed in header
+  - Custom controls styled with theme colors
 
 ## Best Practices
 
-### 1. API Integration Guidelines
-- Models handle their own API communication
-- Use static factory methods for object creation
-- Handle errors appropriately
+### 1. UI Theme Development Guidelines
+- Use AppColors static class for all colors
+- Use AppFonts static class for all typography
+- Reference AppLayout for consistent dimensions
 - Example:
   ```csharp
-  public static async Task<Student> LoginAsync(string email, string password)
+  // In any form
+  this.Size = new Size(AppLayout.FormWidth, 800);
+  headerPanel.Height = AppLayout.HeaderHeight;
+  headerPanel.BackColor = AppColors.HeaderFooter;
+  titleLabel.Font = AppFonts.Title;
+  ```
+
+### 2. Form Inheritance
+- Inherit from LayoutForm for consistent layout
+- Override InitializeComponent when needed
+- Call base.InitializeComponent() to maintain theme
+- Example:
+  ```csharp
+  public class Dashboard : LayoutForm
   {
-      // API communication
-      // Error handling
-      // Object creation
+      protected override void InitializeComponent()
+      {
+          base.InitializeComponent(); // Apply theme settings
+          // Custom initialization
+      }
   }
   ```
 
-#### API Endpoints Structure
-- **Authentication Endpoint**:
-  - `https://training.elexbo.de/studentLogin/loginByemailPassword`
-  - Method: POST
-  - Parameters:
-    - email: Student email
-    - password: Student password
-    - company_id: Hardcoded to "1"
-  - Response: LoginResponse object containing:
-    - Student information
-    - Working days schedule
-    - Access and refresh tokens
+### 3. Responsive Layout
+- Respect AppLayout.FormWidth for form width
+- Use responsive techniques within the fixed width
+- Anchor controls appropriately
+- Use Dock property for panels
+- Scale UI elements proportionally
 
-### 2. Error Handling
-- Use try-catch blocks
-- Log errors appropriately
-- Provide meaningful error messages
-- Handle API errors
+## Future Improvements
 
-### 3. UI Development Guidelines
-#### Theme Management
-- Use AppColors for consistent colors
-- Use AppFonts for consistent typography
-- Follow accessibility guidelines
-- Implement responsive design
-- Add hover effects for interactivity
-- Use shadows and rounded corners
-- Implement proper spacing
+### 1. UI Theme Enhancements
+- Add dark/light theme toggle
+- Create additional color schemes
+- Implement accessibility features
+- Add animation standards
+- Create custom control themes
 
-#### UI Best Practices
-- Use consistent spacing throughout
-- Implement proper padding and margins
-- Add visual feedback for interactions
-- Maintain clean typography hierarchy
-- Use shadows and rounded corners appropriately
-- Ensure proper contrast for readability
-- Implement responsive layouts
-- Handle window resizing properly
-- Add loading states for async operations
-- Provide clear error feedback
+### 2. Layout Improvements
+- Enhanced responsive behavior
+- Better mobile compatibility
+- Improved sidebar navigation
+- Additional layout templates
+- Custom control templates
 
-### 4. Code Organization
-- Follow namespace conventions
-- Keep classes focused and single-responsibility
-- Use appropriate access modifiers
-- Document public APIs
+### 3. Dashboard Enhancements
+- Interactive dashboard tiles
+- Real-time notification area
+- Quick action buttons
+- Enhanced student stats 
+- Activity timeline
+- Progress indicators
 
-### 5. Performance
-- Implement proper disposal of resources
-- Use async/await appropriately
-- Cache data when appropriate
-- Optimize API calls
-
-### 6. Security
-- Never store sensitive data in code
-- Use secure communication
-- Implement proper authentication
-- Follow security best practices
-
-## Development Guidelines
-
-### Future Development
-1. **Adding New Features**
-   - Create new model class with API communication
-   - Implement UI forms
-   - Add configuration settings if needed
-   - Update documentation
-
-2. **API Integration**
-   - Define API endpoints in model
-   - Implement API communication
-   - Add error handling
-   - Update documentation
-
-3. **UI Development**
-   - Create new form
-   - Implement required UI components
-   - Add event handlers
-   - Implement data binding
-   - Test responsiveness and accessibility
-
-### Testing Guidelines
-1. **Unit Testing**
-   - Test model classes
-   - Mock HttpClient
-   - Test error scenarios
-   - Verify data validation
-
-2. **Integration Testing**
-   - Test API communication
-   - Verify error handling
-   - Test data flow
-   - Validate responses
-
-3. **UI Testing**
-   - Test form layouts
-   - Verify responsiveness
-   - Test user interactions
-   - Validate accessibility
-
-### Maintenance
-1. **Regular Tasks**
-   - Update dependencies
-   - Review error logs
-   - Monitor API performance
-   - Update documentation
-
-2. **Security Updates**
-   - Review security practices
-   - Update authentication
-   - Monitor for vulnerabilities
-
-3. **Performance Optimization**
-   - Review API calls
-   - Optimize data caching
-   - Monitor memory usage
-   - Update UI responsiveness
+### 4. Theme Implementation
+- Create a ThemeManager class to switch themes
+- Add user theme preferences
+- Implement OS-aware theming
+- Create custom-styled common controls
 
 ## Conclusion
 
-This documentation reflects the current state of the Student App, a Windows Forms application built with .NET 8.0. The application features:
+The Student App has evolved with a robust UI theming system centered around AppTheme.cs. The application now features:
 
-1. **Modern Architecture**
-   - Model-centric API communication
-   - Clean separation of concerns
-   - Strong type safety and error handling
-   - Efficient data flow between components
+1. **Centralized Theme Management**
+   - AppColors for consistent color palette
+   - AppFonts for standardized typography
+   - AppLayout for consistent dimensions and spacing
+   - HeaderFooter specific color for better visual hierarchy
 
-2. **Robust Authentication**
-   - Model-based API communication
-   - Proper error handling and validation
-   - User-friendly error messages
-   - Remember email functionality
+2. **Standardized Layout**
+   - Fixed form width of 850px for consistent experience
+   - Standardized header and footer heights
+   - Consistent padding and margins
+   - Base LayoutForm for unified appearance
 
-3. **Efficient Data Models**
-   - Self-contained API communication
-   - Well-structured Student and WorkingDay models
-   - Proper constructors for data initialization
-   - Null safety with nullable reference types
+3. **Improved Visual Design**
+   - Dark gray header and footer for professional appearance
+   - Consistent spacing throughout the interface
+   - Proper typography hierarchy
+   - Clean, modern appearance across all forms
 
-4. **User Interface**
-   - Modern split-panel design
-   - Professional styling with gradients and shadows
-   - Responsive layout
-   - Clear error feedback
-   - Loading states for async operations
+4. **Responsive Design**
+   - Fixed form width with responsive internal layout
+   - Properly anchored controls
+   - Docked panels for flexible layout
+   - Adaptive content areas
 
-5. **Code Organization**
-   - Clear file structure
-   - Proper namespace organization
-   - Consistent coding style
-   - Well-documented code
+The theming system ensures visual consistency across the application while maintaining flexibility for future enhancements. The base LayoutForm provides a solid foundation that all forms can inherit from, ensuring a unified look and feel throughout the application.
 
-The application follows best practices for Windows Forms development and provides a solid foundation for future enhancements. The simplified architecture allows for easy addition of new features while maintaining code quality and maintainability.
-
-Key strengths of the current implementation:
-- Model-centric API communication
-- Clean separation of concerns
-- Efficient data flow between components
-- Professional UI design
-- Robust error handling
-- Clear documentation
-
-Future development should focus on:
-1. Adding new features while maintaining the current architecture
-2. Implementing additional security measures
-3. Enhancing error handling and logging
-4. Adding comprehensive testing
-5. Optimizing performance
-6. Improving user experience
-
-This documentation serves as a living guide for development, and should be updated as new features are added or architectural decisions are made. 
-
-### 7. Curriculum API Integration
-- **Implementation**: Release model handles its own API communication and caching
-  ```csharp
-  public class Release
-  {
-      private static readonly HttpClient _client = new HttpClient();
-      private static readonly string API_BASE_URL = "https://learnpath.elexbo.de";
-      
-      // Properties
-      public int id { get; set; }
-      public int program_id { get; set; }
-      // ... other properties ...
-      public ReleaseContent? content { get; set; }
-      
-      // Local caching methods
-      private static string GetLocalStoragePath(int releaseId)
-      {
-          // Implementation to generate local file path
-      }
-      
-      public static bool IsLocalReleaseValid(int releaseId)
-      {
-          // Implementation to check if cached data is valid
-      }
-      
-      private static void SaveReleaseToLocal(ReleaseApiResponse response, int releaseId)
-      {
-          // Implementation to save API response locally
-      }
-      
-      private static Release? LoadReleaseFromLocal(int releaseId)
-      {
-          // Implementation to load cached data
-      }
-      
-      // Static factory method for fetching release data
-      public static async Task<Release> GetReleaseAsync(Student student, bool forceRefresh = false)
-      {
-          // Implementation to get from cache or API as needed
-      }
-  }
-  ```
-  
-- **Data Structure**:
-  - Hierarchical organization:
-    - Release contains ReleaseContent
-    - ReleaseContent contains Program and Subjects
-    - Subjects contain Topics
-    - Topics contain Lessons and Resources
-  - Clean model separation with proper relationships
-  - Strong typing for all curriculum elements
-
-- **Dashboard Integration**:
-  ```csharp
-  private async void LoadReleaseDataAsync()
-  {
-      try
-      {
-          // Show loading indicator
-          ShowLoadingIndicator("Loading curriculum data...");
-          
-          // Load release data
-          currentRelease = await Release.GetReleaseAsync(currentStudent);
-          
-          // Hide loading indicator
-          HideLoadingIndicator();
-          
-          // Update the curriculum panel with the loaded data
-          UpdateCurriculumPanel();
-      }
-      catch (Exception ex)
-      {
-          HideLoadingIndicator();
-          MessageBox.Show($"Failed to load curriculum data: {ex.Message}", "Error", 
-              MessageBoxButtons.OK, MessageBoxIcon.Error);
-      }
-  }
-  ```
-
-- **UI Presentation**:
-  - TreeView for hierarchical display of curriculum
-  - Tooltips for detailed descriptions
-  - Resource links with double-click to open
-  - Hours displayed for subjects, topics, and lessons
-  - Loading indicators during data retrieval
-
-- **Features**:
-  - Automatic loading of curriculum on dashboard open
-  - Smart caching to minimize API calls
-  - Hierarchical display of all learning content
-  - Access to learning resources
-  - Program and subject descriptions
-
-- **Benefits**:
-  - Provides students with a complete view of their learning path
-  - Improves performance through local caching
-  - Maintains application responsiveness with async loading
-  - Provides quick access to learning resources
-  - Follows established model-centric pattern 
+Future development should leverage the theme system for all new UI elements and continue to refine the visual design for optimal user experience. 
