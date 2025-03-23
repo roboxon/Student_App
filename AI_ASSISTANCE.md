@@ -305,13 +305,17 @@ public static class AppFonts
 ### 5. Base Layout Implementation
 - **Location**: LayoutForm.cs
 - **Features**:
-  - Header panel with title and user info
-  - Side menu with navigation buttons
-  - Content wrapper for main content
-  - Footer with version and status
-  - Responsive design
-  - Rounded corners and shadows
-  - Professional color scheme
+  - Header Panel (60px height)
+  - Side Menu Panel (200px width)
+  - Content Wrapper
+  - Footer Panel (30px height)
+  - Responsive design (min size 800x600)
+  - Dynamic menu system
+  - User info display
+  - Status indicators
+  - Version display
+  - Shadow effects
+  - Rounded corners
 
 ### 6. Project Configuration
 - **Target Framework**: .NET 8.0 Windows
@@ -602,4 +606,73 @@ Future development should focus on:
 5. Optimizing performance
 6. Improving user experience
 
-This documentation serves as a living guide for development, and should be updated as new features are added or architectural decisions are made. 
+This documentation serves as a living guide for development, and should be updated as new features are added or architectural decisions are made.
+
+## Project Structure
+
+### 1. Core Files
+- **Student_App.csproj**
+  - Target Framework: net8.0-windows
+  - Application Icon: Resource/DAA_Logo.ico
+  - Key NuGet Packages:
+    - Newtonsoft.Json
+    - System.Configuration.ConfigurationManager
+
+### 2. Forms
+- **Login.cs** - Main authentication form
+- **Dashboard.cs** - Main application interface
+- **SystemTrayApplication.cs** - System tray integration
+- **ApiResponseViewer.cs** - API response debugging tool
+- **LayoutForm.cs** - Base layout template
+
+### 3. Models
+- **Student.cs** - Core student data model
+- **LoginResponse.cs** - API authentication response
+- **WorkingDay.cs** - Schedule data model
+
+### 4. Configuration
+- **App.config** - Application settings
+  - Environment settings
+  - API endpoints
+  - Service configurations
+- **AppConfig.cs** - Configuration access layer
+- **AppStyles.cs** - UI style configurations
+
+### 5. UI
+- **AppTheme.cs** - Theme colors and fonts
+
+### 6. Resources
+- **DAA_Logo.ico** - Application icon
+
+### 2. Configuration System
+- **Implementation**:
+  ```csharp
+  public static class AppConfig
+  {
+      public static class Environment
+      {
+          public static string Current => ConfigurationManager.AppSettings["Environment"] ?? "Development";
+          public static bool IsDevelopment => Current.Equals("Development", StringComparison.OrdinalIgnoreCase);
+          public static bool IsProduction => Current.Equals("Production", StringComparison.OrdinalIgnoreCase);
+      }
+
+      public static string TokenEndpoint => ConfigurationManager.AppSettings["TokenEndpoint"];
+      public static string ApiBaseUrl => ConfigurationManager.AppSettings["ApiBaseUrl"];
+  }
+  ```
+- **Features**:
+  - Environment-based configuration
+  - API endpoint management
+  - Service timeout settings
+  - Token management
+
+## Current Issues and Warnings
+1. **Null Reference Warnings**:
+   - SystemTrayApplication event handlers
+   - Dashboard form initialization
+   - Student model data handling
+   - Login form null checks
+2. **Code Improvements Needed**:
+   - Unused exception variable in Login.cs
+   - Null checking in Student constructor
+   - Event handler null safety 
