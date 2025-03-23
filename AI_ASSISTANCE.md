@@ -85,7 +85,7 @@ This is a Windows Forms application designed for student activities management, 
 
 ### LayoutForm Base Class
 - **Status**: Implemented
-- **Location**: LayoutForm.cs
+- **Location**: Forms/LayoutForm.cs
 - **Features**:
   - Header panel with:
     - Application title
