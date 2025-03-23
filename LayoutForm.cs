@@ -27,7 +27,7 @@ namespace Student_App
         protected virtual void InitializeComponent()
         {
             this.Text = "Student App";
-            this.Size = new Size(1200, 800);
+            this.Size = new Size(AppLayout.FormWidth, 800);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = AppColors.Background;
             this.MinimumSize = new Size(800, 600);
@@ -37,8 +37,8 @@ namespace Student_App
         {
             // Header Panel
             headerPanel.Dock = DockStyle.Top;
-            headerPanel.Height = 60;
-            headerPanel.BackColor = AppColors.Primary;
+            headerPanel.Height = AppLayout.HeaderHeight;
+            headerPanel.BackColor = AppColors.HeaderFooter;
             headerPanel.Padding = new Padding(20);
 
             titleLabel.Text = "Student App";
@@ -76,8 +76,8 @@ namespace Student_App
 
             // Footer Panel
             footerPanel.Dock = DockStyle.Bottom;
-            footerPanel.Height = 30;
-            footerPanel.BackColor = AppColors.Primary;
+            footerPanel.Height = AppLayout.FooterHeight;
+            footerPanel.BackColor = AppColors.HeaderFooter;
 
             var versionLabel = new Label
             {
