@@ -43,10 +43,33 @@ namespace Student_App.Models
         // Initialize daily reports for the week
         public void InitializeWeek(Student student)
         {
-            DailyReports.Clear();
+            // Initialize DailyReports if it's null
+            if (DailyReports == null)
+                DailyReports = new List<DailyReport>();
+            else
+                DailyReports.Clear();
             
-            // Get working days from student
-            var workingDayNumbers = student.working_days.Select(wd => (int)wd.day_number).ToList();
+            // Handle null student
+            if (student == null || student.working_days == null)
+            {
+                // Create a basic week with empty days
+                for (int i = 0; i < 7; i++)
+                {
+                    DateTime currentDate = StartDate.AddDays(i);
+                    DailyReports.Add(new DailyReport
+                    {
+                        Date = currentDate,
+                        HourlyReports = new List<HourlyReport>()
+                    });
+                }
+                return;
+            }
+            
+            // Get working days from student (safely)
+            var workingDayNumbers = student.working_days
+                .Where(wd => wd != null)
+                .Select(wd => (int)wd.day_number)
+                .ToList();
             
             // Create reports for each day of the week (that is a working day)
             for (int i = 0; i < 7; i++)
@@ -57,20 +80,24 @@ namespace Student_App.Models
                 // Adjust for week starting with Monday in some systems
                 if (dayOfWeek == 0) dayOfWeek = 7; // Sunday becomes 7
                 
+                // Create a daily report for this day (whether it's a working day or not)
+                var dailyReport = new DailyReport
+                {
+                    Date = currentDate,
+                    HourlyReports = new List<HourlyReport>()
+                };
+
+                // Only add hour slots if it's a working day
                 if (workingDayNumbers.Contains(dayOfWeek))
                 {
-                    var dailyReport = new DailyReport
-                    {
-                        Date = currentDate,
-                        HourlyReports = new List<HourlyReport>()
-                    };
-
                     // Add hour slots based on student's schedule
-                    var daySchedule = student.working_days.FirstOrDefault(wd => (int)wd.day_number == dayOfWeek);
+                    var daySchedule = student.working_days.FirstOrDefault(wd => wd != null && (int)wd.day_number == dayOfWeek);
                     if (daySchedule != null)
                     {
                         // Parse start and end times
-                        if (TimeSpan.TryParse(daySchedule.start_time, out TimeSpan startTime) && 
+                        if (!string.IsNullOrEmpty(daySchedule.start_time) && 
+                            !string.IsNullOrEmpty(daySchedule.end_time) && 
+                            TimeSpan.TryParse(daySchedule.start_time, out TimeSpan startTime) && 
                             TimeSpan.TryParse(daySchedule.end_time, out TimeSpan endTime))
                         {
                             // Create hour slots (assuming 1-hour increments)
@@ -88,9 +115,9 @@ namespace Student_App.Models
                             }
                         }
                     }
-
-                    DailyReports.Add(dailyReport);
                 }
+
+                DailyReports.Add(dailyReport);
             }
         }
 

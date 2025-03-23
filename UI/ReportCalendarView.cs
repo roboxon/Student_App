@@ -67,17 +67,25 @@ namespace Student_App.UI
         
         private void Calendar_DateSelected(object sender, DateRangeEventArgs e)
         {
-            // Find the start of the selected week
-            DateTime firstDay = e.Start;
-            int diff = (7 + (firstDay.DayOfWeek - DayOfWeek.Monday)) % 7;
-            DateTime weekStart = firstDay.AddDays(-1 * diff);
-            
-            // Ensure we select the entire week
-            calendar.SelectionStart = weekStart;
-            calendar.SelectionEnd = weekStart.AddDays(6);
-            
-            // Raise the event
-            WeekSelected?.Invoke(this, weekStart);
+            try
+            {
+                // Find the start of the selected week
+                DateTime firstDay = e.Start;
+                int diff = (7 + (firstDay.DayOfWeek - DayOfWeek.Monday)) % 7;
+                DateTime weekStart = firstDay.AddDays(-1 * diff);
+                
+                // Ensure we select the entire week
+                calendar.SelectionStart = weekStart;
+                calendar.SelectionEnd = weekStart.AddDays(6);
+                
+                // Raise the event
+                WeekSelected?.Invoke(this, weekStart);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting date: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         
         private void Calendar_DateChanged(object sender, DateRangeEventArgs e)

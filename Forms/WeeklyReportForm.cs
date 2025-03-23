@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using Student_App.Models;
 using Student_App.Services.Reports;
 using Student_App.UI;
+using System.Collections.Generic;
 
 namespace Student_App.Forms
 {
@@ -143,161 +144,225 @@ namespace Student_App.Forms
         
         private async void LoadWeeklyReport()
         {
-            statusLabel.Text = "Loading...";
-            
-            // First try to load from local storage
-            currentReport = await LocalReportStorageManager.GetWeekReportAsync(selectedWeekStart);
-            
-            // If not found locally, create a new one or try to fetch from server
-            if (currentReport == null)
+            try
             {
-                // Try to fetch from server
-                currentReport = await WeeklyReport.FetchFromServerAsync(
-                    currentStudent.id, selectedWeekStart, currentStudent.access_token);
-                    
-                // If still null, create a new one
+                statusLabel.Text = "Loading...";
+                
+                // First try to load from local storage
+                currentReport = await LocalReportStorageManager.GetWeekReportAsync(selectedWeekStart);
+                
+                // If not found locally, create a new one or try to fetch from server
                 if (currentReport == null)
                 {
-                    currentReport = new WeeklyReport
+                    // Try to fetch from server (but handle the case where we're not connected)
+                    try
                     {
-                        StudentId = currentStudent.id,
-                        StartDate = selectedWeekStart,
-                        EndDate = selectedWeekStart.AddDays(6),
-                        WeekNumber = GetIso8601WeekOfYear(selectedWeekStart),
-                        Year = selectedWeekStart.Year
-                    };
-                    
-                    // Initialize with empty daily reports based on schedule
-                    currentReport.InitializeWeek(currentStudent);
+                        if (currentStudent != null && !string.IsNullOrEmpty(currentStudent.access_token))
+                        {
+                            currentReport = await WeeklyReport.FetchFromServerAsync(
+                                currentStudent.id, selectedWeekStart, currentStudent.access_token);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Silently fail and create a new report
+                    }
+                        
+                    // If still null, create a new one
+                    if (currentReport == null)
+                    {
+                        currentReport = new WeeklyReport
+                        {
+                            StudentId = currentStudent?.id ?? 0,
+                            StartDate = selectedWeekStart,
+                            EndDate = selectedWeekStart.AddDays(6),
+                            WeekNumber = GetIso8601WeekOfYear(selectedWeekStart),
+                            Year = selectedWeekStart.Year
+                        };
+                        
+                        // Initialize with empty daily reports based on schedule
+                        if (currentStudent != null)
+                        {
+                            currentReport.InitializeWeek(currentStudent);
+                        }
+                        else
+                        {
+                            // Create an empty report structure if student is null
+                            currentReport.DailyReports = new List<DailyReport>();
+                            for (int i = 0; i < 7; i++)
+                            {
+                                var date = selectedWeekStart.AddDays(i);
+                                currentReport.DailyReports.Add(new DailyReport
+                                {
+                                    Date = date,
+                                    HourlyReports = new List<HourlyReport>()
+                                });
+                            }
+                        }
+                    }
                 }
+                
+                // Update UI
+                UpdateUI();
+                statusLabel.Text = $"Week of {selectedWeekStart:MMM dd, yyyy} loaded";
             }
-            
-            // Update UI
-            UpdateUI();
-            statusLabel.Text = $"Week of {selectedWeekStart:MMM dd, yyyy} loaded";
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading report: {ex.Message}\n\n{ex.StackTrace}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         
         private void UpdateUI()
         {
-            // Clear existing tabs
-            dailyTabs.TabPages.Clear();
-            
-            // Add tabs for each daily report
-            foreach (var dailyReport in currentReport.DailyReports)
+            try
             {
-                var tabPage = new TabPage(dailyReport.Date.ToString("dddd, MMM dd"));
-                
-                // Create hourly report panel
-                var hourlyPanel = new Panel
+                // Safety check
+                if (currentReport == null)
                 {
-                    Dock = DockStyle.Fill,
-                    AutoScroll = true
-                };
+                    statusLabel.Text = "Error: No report data available";
+                    return;
+                }
+
+                // Clear existing tabs
+                dailyTabs.TabPages.Clear();
                 
-                int yPos = 10;
-                
-                // Add hourly report rows
-                foreach (var hourlyReport in dailyReport.HourlyReports)
+                // Add tabs for each daily report
+                foreach (var dailyReport in currentReport.DailyReports)
                 {
-                    // Time label
-                    var timeLabel = new Label
+                    var tabPage = new TabPage(dailyReport.Date.ToString("dddd, MMM dd"));
+                    
+                    // Create hourly report panel
+                    var hourlyPanel = new Panel
                     {
-                        Text = hourlyReport.TimeRange,
-                        Width = 80,
-                        Location = new Point(10, yPos + 5),
-                        Font = AppFonts.Bold
+                        Dock = DockStyle.Fill,
+                        AutoScroll = true
                     };
                     
-                    // Subject/Topic dropdown
-                    var subjectDropdown = new ComboBox
-                    {
-                        Width = 200,
-                        Location = new Point(100, yPos),
-                        DropDownStyle = ComboBoxStyle.DropDownList,
-                        Tag = hourlyReport  // Store reference to the hourly report
-                    };
+                    int yPos = 10;
                     
-                    // Add sample subjects - in a real app, this would come from curriculum data
-                    subjectDropdown.Items.Add("Select Subject/Topic");
-                    subjectDropdown.Items.Add("Fachquali FISI-02 - Datenbanken");
-                    subjectDropdown.Items.Add("Programmierung - C#");
-                    subjectDropdown.Items.Add("Netzwerktechnik - TCP/IP");
-                    
-                    subjectDropdown.SelectedIndex = 0;
-                    if (hourlyReport.SubjectId > 0)
+                    // Add hourly report rows - but check for null first
+                    if (dailyReport.HourlyReports != null)
                     {
-                        // Try to select the right item based on subjectId
-                        // In real implementation, we'd match with actual data
-                        subjectDropdown.SelectedIndex = hourlyReport.SubjectId % 3 + 1;
+                        foreach (var hourlyReport in dailyReport.HourlyReports)
+                        {
+                            // Only add controls if the hourly report is valid
+                            if (hourlyReport != null)
+                            {
+                                // Time label
+                                var timeLabel = new Label
+                                {
+                                    Text = hourlyReport.TimeRange ?? "Unknown time",
+                                    Width = 80,
+                                    Location = new Point(10, yPos + 5),
+                                    Font = AppFonts.Bold
+                                };
+                                
+                                // Subject/Topic dropdown
+                                var subjectDropdown = new ComboBox
+                                {
+                                    Width = 200,
+                                    Location = new Point(100, yPos),
+                                    DropDownStyle = ComboBoxStyle.DropDownList,
+                                    Tag = hourlyReport  // Store reference to the hourly report
+                                };
+                                
+                                // Add sample subjects - in a real app, this would come from curriculum data
+                                subjectDropdown.Items.Add("Select Subject/Topic");
+                                subjectDropdown.Items.Add("Fachquali FISI-02 - Datenbanken");
+                                subjectDropdown.Items.Add("Programmierung - C#");
+                                subjectDropdown.Items.Add("Netzwerktechnik - TCP/IP");
+                                
+                                subjectDropdown.SelectedIndex = 0;
+                                if (hourlyReport.SubjectId > 0)
+                                {
+                                    // Try to select the right item based on subjectId
+                                    // In real implementation, we'd match with actual data
+                                    subjectDropdown.SelectedIndex = hourlyReport.SubjectId % 3 + 1;
+                                }
+                                
+                                subjectDropdown.SelectedIndexChanged += SubjectDropdown_SelectedIndexChanged;
+                                
+                                // Description textbox
+                                var descriptionBox = new TextBox
+                                {
+                                    Width = 400,
+                                    Height = 50,
+                                    Multiline = true,
+                                    Location = new Point(310, yPos),
+                                    Text = hourlyReport.LearningDescription ?? "",
+                                    Tag = hourlyReport  // Store reference to the hourly report
+                                };
+                                
+                                descriptionBox.TextChanged += DescriptionBox_TextChanged;
+                                
+                                // Status indicator
+                                var statusIcon = new Panel
+                                {
+                                    Width = 16,
+                                    Height = 16,
+                                    Location = new Point(720, yPos + 5),
+                                    BackColor = hourlyReport.IsSubmitted ? AppColors.Success : AppColors.Secondary
+                                };
+                                
+                                // Add controls
+                                hourlyPanel.Controls.Add(timeLabel);
+                                hourlyPanel.Controls.Add(subjectDropdown);
+                                hourlyPanel.Controls.Add(descriptionBox);
+                                hourlyPanel.Controls.Add(statusIcon);
+                            }
+                            
+                            yPos += 60;
+                        }
                     }
                     
-                    subjectDropdown.SelectedIndexChanged += SubjectDropdown_SelectedIndexChanged;
-                    
-                    // Description textbox
-                    var descriptionBox = new TextBox
+                    // Daily summary
+                    var dailySummaryLabel = new Label
                     {
-                        Width = 400,
-                        Height = 50,
+                        Text = "Daily Summary:",
+                        Location = new Point(10, yPos + 10),
+                        Font = AppFonts.Bold,
+                        AutoSize = true
+                    };
+                    
+                    var dailySummaryBox = new TextBox
+                    {
+                        Width = 600,
+                        Height = 60,
                         Multiline = true,
-                        Location = new Point(310, yPos),
-                        Text = hourlyReport.LearningDescription,
-                        Tag = hourlyReport  // Store reference to the hourly report
+                        Location = new Point(10, yPos + 30),
+                        Text = dailyReport.DailySummary ?? "",
+                        Tag = dailyReport  // Store reference to the daily report
                     };
                     
-                    descriptionBox.TextChanged += DescriptionBox_TextChanged;
+                    dailySummaryBox.TextChanged += DailySummaryBox_TextChanged;
                     
-                    // Status indicator
-                    var statusIcon = new Panel
-                    {
-                        Width = 16,
-                        Height = 16,
-                        Location = new Point(720, yPos + 5),
-                        BackColor = hourlyReport.IsSubmitted ? AppColors.Success : AppColors.Secondary
-                    };
+                    hourlyPanel.Controls.Add(dailySummaryLabel);
+                    hourlyPanel.Controls.Add(dailySummaryBox);
                     
-                    // Add controls
-                    hourlyPanel.Controls.Add(timeLabel);
-                    hourlyPanel.Controls.Add(subjectDropdown);
-                    hourlyPanel.Controls.Add(descriptionBox);
-                    hourlyPanel.Controls.Add(statusIcon);
-                    
-                    yPos += 60;
+                    // Add to tab
+                    tabPage.Controls.Add(hourlyPanel);
+                    dailyTabs.TabPages.Add(tabPage);
                 }
                 
-                // Daily summary
-                var dailySummaryLabel = new Label
+                // Update weekly summary
+                weeklySummaryBox.Text = currentReport.WeeklySummary ?? "";
+                
+                // Update the calendar display (in case status changed)
+                try
                 {
-                    Text = "Daily Summary:",
-                    Location = new Point(10, yPos + 10),
-                    Font = AppFonts.Bold,
-                    AutoSize = true
-                };
-                
-                var dailySummaryBox = new TextBox
+                    calendarView.RefreshCalendar();
+                }
+                catch (Exception)
                 {
-                    Width = 600,
-                    Height = 60,
-                    Multiline = true,
-                    Location = new Point(10, yPos + 30),
-                    Text = dailyReport.DailySummary,
-                    Tag = dailyReport  // Store reference to the daily report
-                };
-                
-                dailySummaryBox.TextChanged += DailySummaryBox_TextChanged;
-                
-                hourlyPanel.Controls.Add(dailySummaryLabel);
-                hourlyPanel.Controls.Add(dailySummaryBox);
-                
-                // Add to tab
-                tabPage.Controls.Add(hourlyPanel);
-                dailyTabs.TabPages.Add(tabPage);
+                    // Ignore calendar refresh errors
+                }
             }
-            
-            // Update weekly summary
-            weeklySummaryBox.Text = currentReport.WeeklySummary;
-            
-            // Update the calendar display (in case status changed)
-            calendarView.RefreshCalendar();
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error updating UI: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         
         private void SubjectDropdown_SelectedIndexChanged(object sender, EventArgs e)
